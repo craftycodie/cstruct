@@ -28,6 +28,10 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
+      # Trusted publishing needs a current npm CLI; Node's bundled npm can 404 despite valid OIDC.
+      # https://github.com/npm/cli/issues/9088
+      - run: npm install -g npm@latest
+
       - name: Verify tag matches package.json version
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -39,6 +43,8 @@ jobs:
 
       - run: npm ci
       - run: npm run validate
+
+      - run: npm whoami
 
       - name: Publish to npm
         run: |
