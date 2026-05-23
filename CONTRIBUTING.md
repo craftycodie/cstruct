@@ -25,6 +25,15 @@ Use Node.js 22 (same as CI).
 
 Before opening a pull request, run `npm run validate` locally.
 
+### Releasing
+
+1. Ensure `main` is clean and up to date.
+2. Run `npm run validate` (optional; CI runs it again).
+3. Run `npm run release` — enter the new semver when prompted.
+4. CI publishes to npm (`latest` or `next` for prereleases) and creates a GitHub release.
+
+Do not run `npm publish` locally; tagging drives the [Publish workflow](.github/workflows/publish.yml).
+
 Tests live in `tests/` and may also sit next to source as `*.test.ts`. This library relies on [Stage 3 decorators](https://github.com/tc39/proposal-decorators); Vitest uses SWC with `decoratorVersion: "2022-03"`.
 
 ## Pull requests

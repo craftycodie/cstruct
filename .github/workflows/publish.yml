@@ -1,7 +1,8 @@
 name: Publish
 
-# Push a version tag to publish, e.g. git tag v0.1.0 && git push origin v0.1.0
-# Tag must match the "version" field in package.json (without the leading v).
+# Push a version tag to publish, e.g. git tag v0.1.0-pre1 && git push origin v0.1.0-pre1
+# Tag must match package.json "version" (without the leading v).
+# Prerelease versions (e.g. 0.1.0-pre1) publish to the npm dist-tag "next", not "latest".
 on:
   push:
     tags:
@@ -33,7 +34,16 @@ jobs:
 
       - run: npm ci
       - run: npm run validate
-      - run: npm publish --provenance --access public
+
+      - name: Publish to npm
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          NPM_TAG=latest
+          if echo "$PKG_VERSION" | grep -q '-'; then
+            NPM_TAG=next
+          fi
+          echo "Publishing @craftycodie/cstruct@${PKG_VERSION} with dist-tag ${NPM_TAG}"
+          npm publish --provenance --access public --tag "$NPM_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
