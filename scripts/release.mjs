@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { createInterface } from "node:readline/promises";
 
 const SEMVER =
   /^\d+\.\d+\.\d+(?:-(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*))?(?:\+[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*)?$/;
@@ -63,6 +63,9 @@ if (gitTagExists(tag)) {
 }
 
 console.log(`\nReleasing ${pkg.name}@${version} (tag ${tag})\n`);
+
+console.log("Running validate…\n");
+run("npm run validate");
 
 run(`npm version ${version} --no-git-tag-version`);
 run("git add package.json package-lock.json");

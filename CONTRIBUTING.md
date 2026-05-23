@@ -28,8 +28,7 @@ Before opening a pull request, run `npm run validate` locally.
 ### Releasing
 
 1. Ensure `main` is clean and up to date.
-2. Run `npm run validate` (optional; CI runs it again).
-3. Run `npm run release` — enter the new semver when prompted.
+2. Run `npm run release` — enter the new semver when prompted (runs `validate` before tagging).
 4. CI publishes to npm (`latest` or `next` for prereleases) and creates a GitHub release.
 
 Do not run `npm publish` locally; tagging drives the [Publish workflow](.github/workflows/publish.yml).
