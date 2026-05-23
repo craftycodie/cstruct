@@ -2,10 +2,11 @@ name: Publish
 
 # Push a version tag to publish, e.g. git tag v0.1.0-pre1 && git push origin v0.1.0-pre1
 # Tag must match package.json "version" (without the leading v).
-# Prerelease versions (e.g. 0.1.0-pre1) publish to the npm dist-tag "next", not "latest".
+# Prerelease versions publish to the npm dist-tag "next", not "latest".
 #
-# npm trusted publishing (OIDC): no NPM_TOKEN secret. Link craftycodie/cstruct → publish.yml
-# on npm. If npm requires a GitHub Environment, set `environment` on the job below to match.
+# npm trusted publishing (OIDC): configure craftycodie/cstruct → publish.yml on npm.
+# Do not set registry-url on setup-node (avoids a broken always-auth .npmrc); npm publish
+# exchanges the GitHub OIDC token at publish time. Use a current npm CLI — see npm/cli#9088.
 on:
   push:
     tags:
@@ -14,8 +15,6 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Uncomment and match the environment name from npm trusted publisher settings, if any:
-    # environment: npm
     permissions:
       contents: write
       id-token: write
@@ -25,12 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
-
-      # Trusted publishing needs a current npm CLI; Node's bundled npm can 404 despite valid OIDC.
-      # https://github.com/npm/cli/issues/9088
-      - run: npm install -g npm@latest
 
       - name: Verify tag matches package.json version
         run: |
@@ -44,8 +38,6 @@ jobs:
       - run: npm ci
       - run: npm run validate
 
-      - run: npm whoami
-
       - name: Publish to npm
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
@@ -54,7 +46,7 @@ jobs:
             NPM_TAG=next
           fi
           echo "Publishing @craftycodie/cstruct@${PKG_VERSION} with dist-tag ${NPM_TAG}"
-          npm publish --provenance --access public --tag "$NPM_TAG"
+          npx npm@latest publish --provenance --access public --tag "$NPM_TAG"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
