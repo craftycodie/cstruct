@@ -1,0 +1,23 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "exclude": ["**/*.test.ts", "**/codec.ts"],
+  "tsconfig": "tsconfig.typedoc.json",
+  "out": "docs-build",
+  "readme": "README.md",
+  "name": "@craftycodie/cstruct",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "githubPages": true,
+  "navigation": {
+    "includeCategories": true
+  },
+  "sort": ["source-order"],
+  "externalSymbolLinkMappings": {
+    "typescript": {
+      "Date": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Date"
+    }
+  }
+}

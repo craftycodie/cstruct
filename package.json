@@ -1,0 +1,64 @@
+{
+  "name": "@craftycodie/cstruct",
+  "version": "0.1.0",
+  "description": "Stage 3 struct decorators for packed binary layouts",
+  "type": "module",
+  "main": "./dist-cjs/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "dist-cjs"
+  ],
+  "scripts": {
+    "build": "node scripts/prepare-build-src.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node scripts/write-cjs-package-json.mjs",
+    "check": "ultracite check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "docs": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:api": "typedoc",
+    "docs:preview": "vitepress preview docs",
+    "fix": "ultracite fix",
+    "test": "vitest run",
+    "validate": "npm run check && npm run test && npm run typecheck && npm run docs:build",
+    "prepack": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/craftycodie/cstruct.git"
+  },
+  "bugs": {
+    "url": "https://github.com/craftycodie/cstruct/issues"
+  },
+  "homepage": "https://craftycodie.github.io/cstruct/",
+  "keywords": [
+    "binary",
+    "struct",
+    "decorators",
+    "serialization",
+    "packed",
+    "cstruct"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "@swc/core": "^1.15.33",
+    "@types/node": "^25.9.1",
+    "typedoc": "^0.28.5",
+    "typescript": "^5",
+    "ultracite": "7.7.0",
+    "unplugin-swc": "^1.5.9",
+    "vitepress": "^1.6.4",
+    "vitest": "^3.2.4"
+  }
+}

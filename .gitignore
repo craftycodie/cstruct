@@ -1,0 +1,8 @@
+node_modules/
+.build-src/
+dist/
+dist-cjs/
+docs-build/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+*.tsbuildinfo

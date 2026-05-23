@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "useDefineForClassFields": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "rootDir": ".build-src",
+    "skipLibCheck": true
+  },
+  "include": [".build-src/**/*.ts"],
+  "exclude": [".build-src/**/*.test.ts"]
+}
