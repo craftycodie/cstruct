@@ -3,6 +3,9 @@ name: Publish
 # Push a version tag to publish, e.g. git tag v0.1.0-pre1 && git push origin v0.1.0-pre1
 # Tag must match package.json "version" (without the leading v).
 # Prerelease versions (e.g. 0.1.0-pre1) publish to the npm dist-tag "next", not "latest".
+#
+# npm trusted publishing (OIDC): no NPM_TOKEN secret. Link craftycodie/cstruct → publish.yml
+# on npm. If npm requires a GitHub Environment, set `environment` on the job below to match.
 on:
   push:
     tags:
@@ -11,6 +14,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Uncomment and match the environment name from npm trusted publisher settings, if any:
+    # environment: npm
     permissions:
       contents: write
       id-token: write
@@ -44,8 +49,6 @@ jobs:
           fi
           echo "Publishing @craftycodie/cstruct@${PKG_VERSION} with dist-tag ${NPM_TAG}"
           npm publish --provenance --access public --tag "$NPM_TAG"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
