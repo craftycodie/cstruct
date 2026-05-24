@@ -1,6 +1,6 @@
 # Vitest & SWC
 
-Example `vitest.config.ts` with Stage 3 decorators:
+If you author or test `@c.struct()` classes in your own project (not only consuming prebuilt `dist/`), configure Vitest with SWC and Stage 3 decorators:
 
 ```ts
 import swc from "unplugin-swc";
@@ -24,4 +24,4 @@ export default defineConfig({
 });
 ```
 
-This repo also uses an assert macro plugin for tests; see `tools/vite-plugin-assert-macro.mjs` if you copy the test setup.
+Consumers that only import from published `dist/` do not need this — no decorator flags required at runtime.
