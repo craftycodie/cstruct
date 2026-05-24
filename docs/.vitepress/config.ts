@@ -31,6 +31,7 @@ export default defineConfig({
           { text: "Nested structs", link: "/guide/nested-structs" },
           { text: "Unions", link: "/guide/unions" },
           { text: "Enums", link: "/guide/enums" },
+          { text: "Arrays", link: "/guide/arrays" },
           { text: "Bitfield enums", link: "/guide/bitfields" },
           { text: "Advanced fields", link: "/guide/advanced-fields" },
         ],

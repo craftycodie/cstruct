@@ -23,6 +23,7 @@ import {
 import { read, size, write } from "./codec";
 import {
   arm,
+  arrayType,
   bitfieldType,
   enumType,
   field,
@@ -92,6 +93,7 @@ export const c = {
   pad,
   enum: enumType,
   bitfield: bitfieldType,
+  array: arrayType,
 } as const;
 
 /** Types for {@link c}. */
@@ -102,6 +104,7 @@ export namespace c {
   export type PadField = import("./pad").PadField;
   export type EnumField = import("./enum").EnumField;
   export type BitfieldField = import("./bitfield").BitfieldField;
+  export type ArrayField = import("./array").ArrayField;
   export type BitfieldFlagDefinition =
     import("./bitfield").BitfieldFlagDefinition;
   export type Bitfield<T extends BitfieldFlagDefinition> =

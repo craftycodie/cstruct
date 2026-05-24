@@ -1,10 +1,11 @@
+import { create_array_field } from "./array";
 import type { BitfieldField, BitfieldFlagDefinition } from "./bitfield";
 import { create_bitfield_field } from "./bitfield";
 import { compute_struct_size } from "./codec";
 import type { EnumField } from "./enum";
 import { create_enum_field } from "./enum";
 import { CStructError } from "./errors";
-import type { PadField } from "./pad";
+import { is_pad_field, type PadField } from "./pad";
 import type { PrimitiveType } from "./primitive";
 import {
   CSTRUCT_LAYOUT,
@@ -20,6 +21,8 @@ import { create_union } from "./union";
 
 /** Optional padding around a field in the parent struct layout. */
 export interface FieldOptions {
+  /** Repeat the field `count` times as a fixed-length array on the wire. */
+  count?: number;
   pad_after?: number;
   pad_before?: number;
 }
@@ -55,7 +58,10 @@ function is_field_options(value: unknown): value is FieldOptions {
   return (
     typeof value === "object" &&
     value !== null &&
-    ("pad_before" in value || "pad_after" in value)
+    !("kind" in value) &&
+    ("pad_before" in value ||
+      "pad_after" in value ||
+      "count" in value)
   );
 }
 
@@ -142,13 +148,12 @@ export function field(
       structCtor
     );
 
-    if (
-      typeof type === "object" &&
-      type !== null &&
-      "kind" in type &&
-      type.kind === "pad" &&
-      name.startsWith("_")
-    ) {
+    if (is_pad_field(type) && name.startsWith("_")) {
+      if (options?.count !== undefined) {
+        throw new CStructError(
+          "c.pad() cannot be used with { count } — use one pad field per reserved region"
+        );
+      }
       field_list(context).push({
         name,
         type,
@@ -158,9 +163,14 @@ export function field(
       return;
     }
 
+    const resolved_type =
+      options?.count !== undefined
+        ? create_array_field(type, options.count)
+        : type;
+
     field_list(context).push({
       name,
-      type,
+      type: resolved_type,
       pad_before: options?.pad_before,
       pad_after: options?.pad_after,
     });
@@ -341,4 +351,23 @@ export function bitfieldType(
   options?: { strict?: boolean }
 ): BitfieldField {
   return create_bitfield_field(storage, flags, options);
+}
+
+/**
+ * Fixed-length array field. Use for nested arrays or when `{ count }` is awkward.
+ *
+ * @example
+ * ```ts
+ * @c.field(c.array("u32", 4))
+ * row!: number[];
+ *
+ * @c.field(c.array(c.array("u8", 2), 3))
+ * grid!: number[][];
+ * ```
+ */
+export function arrayType(
+  element: FieldType,
+  count: number
+): import("./array").ArrayField {
+  return create_array_field(element, count);
 }

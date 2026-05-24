@@ -2,9 +2,9 @@
 
 Flag groups packed into an integer primitive use `c.bitfield(storage, flags)`. Each flag is a **boolean** on read/write; the codec packs them into sequential or explicit bit indices.
 
-## Sequential flags (blf_lib order)
+## Sequential flags
 
-Bit index equals array position — same order as `bitfield! { a, b, c }` in [blf_lib](https://github.com/craftycodie/blf):
+Bit index equals array position (first name → bit 0, second → bit 1, and so on):
 
 ```ts
 import { c } from "@craftycodie/cstruct";
