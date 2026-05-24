@@ -3,7 +3,7 @@ import type { Endian } from "../primitive";
 import { read_primitive, write_primitive } from "../primitive";
 import { AdvancedType, need_bytes } from "./advanced-type";
 
-/** Seconds since Unix epoch (u64 wire format). */
+/** Seconds since Unix epoch (stored as u64). */
 export function time64_seconds_to_date(seconds: bigint): Date {
   const ms = Number(seconds) * 1000;
   const date = new Date(ms);

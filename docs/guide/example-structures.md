@@ -54,7 +54,7 @@ const read = c.read(ContentItemCampaignMetadata, bytes, "little");
 
 ## Author / history slot (36 bytes)
 
-Uses `c.Time64()` (wire `u64` seconds → `Date`) and a fixed Latin-1 name buffer. Padding after `is_online` aligns the struct to 36 bytes:
+Uses `c.Time64()` (`u64` seconds → `Date`) and a fixed Latin-1 name buffer. Padding after `is_online` aligns the struct to 36 bytes:
 
 ```ts
 @c.struct()
@@ -87,7 +87,7 @@ const read = c.read(ContentItemHistory, bytes, "little");
 
 ## General metadata (48 bytes)
 
-`pad_after` on `file_type` inserts three zero bytes before `size_in_bytes` (mirrors Reach wire layout):
+`pad_after` on `file_type` inserts three zero bytes before `size_in_bytes` (mirrors Reach layout):
 
 ```ts
 @c.struct()

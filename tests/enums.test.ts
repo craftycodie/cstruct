@@ -38,7 +38,7 @@ describe("enums", () => {
     expect(read.size_in_bytes).toBe(4096);
   });
 
-  it("rejects undefined wire values on read", () => {
+  it("rejects undefined values on read", () => {
     const bytes = new Uint8Array(8);
     bytes[0] = 99;
     expect(() => c.read(GeneralMetadata, bytes, "little")).toThrow(

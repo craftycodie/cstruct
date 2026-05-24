@@ -2,7 +2,7 @@ import { CStructError } from "./errors";
 import type { PrimitiveType } from "./primitive";
 
 /**
- * Integer enum slot: wire type plus the set of allowed numeric values.
+ * Integer enum slot: storage type plus the set of allowed numeric values.
  * Prefer {@link decorators.enumType} on a field instead of building this directly.
  *
  * @example Packet status field
@@ -81,7 +81,7 @@ export function create_enum_field(
 }
 
 /**
- * Validate a wire value against an {@link EnumField} after reading a primitive.
+ * Validate a value against an {@link EnumField} after reading a primitive.
  *
  * @example
  * ```ts

@@ -33,7 +33,7 @@ export interface BitfieldField {
   /** Bits that may be set by known flags (for optional strict validation). */
   readonly mask: bigint;
   readonly storage: PrimitiveType;
-  /** When true, reject wire values with bits outside {@link mask}. */
+  /** When true, reject values with bits outside {@link mask}. */
   readonly strict?: boolean;
 }
 
@@ -152,7 +152,7 @@ function is_bitfield_value(value: unknown): value is Record<string, boolean> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Decode wire integer to `{ flag: boolean, ... }`. */
+/** Decode integer to `{ flag: boolean, ... }`. */
 export function bitfield_from_raw(
   raw: number | bigint,
   field: BitfieldField
@@ -161,7 +161,7 @@ export function bitfield_from_raw(
   const strict = field.strict === true;
   if (strict && (bits & ~field.mask) !== 0n) {
     throw new CStructError(
-      `Invalid bitfield: wire value 0x${bits.toString(16)} has bits outside the defined mask`
+      `Invalid bitfield: value 0x${bits.toString(16)} has bits outside the defined mask`
     );
   }
 
@@ -172,7 +172,7 @@ export function bitfield_from_raw(
   return out;
 }
 
-/** Pack `{ flag: boolean, ... }` to a wire integer. */
+/** Pack `{ flag: boolean, ... }` to an integer. */
 export function bitfield_to_raw(
   value: unknown,
   field: BitfieldField,

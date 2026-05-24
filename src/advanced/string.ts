@@ -27,7 +27,7 @@ function encode_latin1(value: string, max_bytes: number): Uint8Array {
 
 /**
  * Fixed-size Latin-1 string (NUL-terminated within the slot).
- * Not UTF-8 — one wire byte per character (e.g. U+00A6 → 0xA6, not C2 A6).
+ * Not UTF-8 — one byte per character (e.g. U+00A6 → 0xA6, not C2 A6).
  */
 export class CString extends AdvancedType<string> {
   readonly byteSize: number;

@@ -34,7 +34,7 @@ export class CBool extends AdvancedType<boolean> {
 const BOOL = new CBool();
 
 /**
- * 1-byte wire boolean mapped to TypeScript `boolean`.
+ * 1-byte boolean mapped to TypeScript `boolean`.
  *
  * @example
  * ```ts

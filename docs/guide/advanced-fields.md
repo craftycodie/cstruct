@@ -4,10 +4,10 @@ Advanced fields occupy one packed slot in a struct. Pass a factory (`c.Bool`, `c
 
 ## Custom types
 
-Subclass `c.AdvancedType<T>` when you need a wire format that is not a primitive, nested struct, or built-in helper. Implement:
+Subclass `c.AdvancedType<T>` when you need a format that is not a primitive, nested struct, or built-in helper. Implement:
 
 - `byteSize` — fixed width of this slot in bytes
-- `read(bytes, offset, endian, label)` — decode wire bytes to `T`
+- `read(bytes, offset, endian, label)` — decode bytes to `T`
 - `write(bytes, offset, value, endian, label)` — encode `T` into the buffer
 
 The codec calls these hooks during `c.read` / `c.write`; `c.size` includes `byteSize` in the struct total.
@@ -57,7 +57,7 @@ Built-in helpers (`CBool`, `CString`, `CWString`, `CTime64`) are implemented the
 
 ## Boolean — `c.Bool()`
 
-One wire byte: `0` is false, any non-zero byte reads as true; writes `0` or `1` (matches blf_lib `Bool`):
+One byte: `0` is false, any non-zero byte reads as true; writes `0` or `1` (matches blf_lib `Bool`):
 
 ```ts
 @c.struct()

@@ -10,7 +10,7 @@ function swap_utf16(bytes: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Strip U+FEFF whether it came from wire BOM or a prior mis-decode. */
+/** Strip U+FEFF whether it came from a BOM in the buffer or a prior mis-decode. */
 function strip_wstring_bom(value: string): string {
   return value.charCodeAt(0) === 0xfe_ff ? value.slice(1) : value;
 }
@@ -109,8 +109,8 @@ export class CWString extends AdvancedType<string> {
     need_bytes(bytes, offset, this.byteSize, "wide string");
     bytes.fill(0, offset, offset + this.byteSize);
     const le_bytes = encode_utf16le(value, this.byteSize);
-    const wire = endian === "little" ? le_bytes : swap_utf16(le_bytes);
-    bytes.set(wire, offset);
+    const encoded = endian === "little" ? le_bytes : swap_utf16(le_bytes);
+    bytes.set(encoded, offset);
   }
 }
 

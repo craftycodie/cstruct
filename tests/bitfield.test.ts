@@ -59,7 +59,7 @@ describe("bitfield", () => {
     expect(read).toEqual(value);
   });
 
-  it("ignores reserved wire bits by default", () => {
+  it("ignores reserved bits by default", () => {
     const field = create_bitfield_field("u8", DifficultyFlags);
     const decoded = bitfield_from_raw(0b1111_1111, field);
     expect(decoded).toEqual({
@@ -70,7 +70,7 @@ describe("bitfield", () => {
     });
   });
 
-  it("strict mode rejects reserved wire bits", () => {
+  it("strict mode rejects reserved bits", () => {
     const field = create_bitfield_field("u8", DifficultyFlags, {
       strict: true,
     });

@@ -21,7 +21,7 @@ import { create_union } from "./union";
 
 /** Optional padding around a field in the parent struct layout. */
 export interface FieldOptions {
-  /** Repeat the field `count` times as a fixed-length array on the wire. */
+  /** Repeat the field `count` times as a fixed-length array. */
   count?: number;
   pad_after?: number;
   pad_before?: number;

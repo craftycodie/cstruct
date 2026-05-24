@@ -1,6 +1,6 @@
 # Enums
 
-Map integer wire values to a fixed set with `c.enum(storage, map)`:
+Map integer values to a fixed set with `c.enum(storage, map)`:
 
 ```ts
 const Status = {
@@ -15,6 +15,6 @@ class Packet {
 }
 ```
 
-Values are validated on read and write. Use `pad_after` on the same field when the wire layout has trailing padding after a small enum storage type.
+Values are validated on read and write. Use `pad_after` on the same field when the layout has trailing padding after a small enum storage type.
 
 For combinable flag bits in one integer, see [Bitfield enums](./bitfields.md).

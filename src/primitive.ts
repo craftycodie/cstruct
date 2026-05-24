@@ -2,7 +2,7 @@
 export type Endian = "little" | "big";
 
 /**
- * Wire type for packed integers and floats passed to `@c.field("u32")`, `c.enum("i8", …)`, etc.
+ * Primitive type for packed integers and floats passed to `@c.field("u32")`, `c.enum("i8", …)`, etc.
  *
  * `u64` and `i64` read and write as JavaScript `bigint`.
  */

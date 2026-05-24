@@ -34,7 +34,7 @@ Primitives, structs, `c.enum()`, `c.bitfield()`, `c.unionField()`, advanced fiel
 
 Each slot is `union.size` bytes. **Read** uses the parent struct’s union `select` (same arm for every index). **Write** picks the arm from each element’s instance type (`instanceof`), then falls back to `select(parent)` for plain objects.
 
-## Wire layout
+## Layout
 
 Elements are packed contiguously. Struct size is `count × element size`. Use `pad_before` / `pad_after` on the field for outer gaps.
 

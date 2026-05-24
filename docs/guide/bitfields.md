@@ -32,7 +32,7 @@ const chunk = {
 } satisfies Challenge;
 
 const bytes = c.write(Challenge, chunk, "big");
-// wire u32 = 0b101 (bits 0 and 2 set: iron + tough_luck)
+// u32 = 0b101 (bits 0 and 2 set: iron + tough_luck)
 ```
 
 ## Explicit bit indices
@@ -56,9 +56,9 @@ class Challenge {
 
 ## Reserved bits
 
-By default, **unknown wire bits are preserved logically** on read (each named flag still decodes correctly). They are cleared on write because only named flags are packed.
+By default, **unknown bits are preserved logically** on read (each named flag still decodes correctly). They are cleared on write because only named flags are packed.
 
-To reject wire values with bits outside your definition:
+To reject values with bits outside your definition:
 
 ```ts
 @c.field(c.bitfield("u8", DifficultyFlags, { strict: true }))
@@ -81,6 +81,6 @@ const flags = bitfield_from_raw(raw, field);
 
 | | `c.enum` | `c.bitfield` |
 | --- | --- | --- |
-| Wire value | One of N discrete values | Bit mask (combinable flags) |
+| Value | One of N discrete values | Bit mask (combinable flags) |
 | TypeScript | `number` | `{ flag: boolean, ... }` |
 | Validation | Must match a single enum member | Any combination of named bits |
