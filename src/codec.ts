@@ -1,5 +1,6 @@
 import { is_advanced_type } from "./advanced";
 import { assert, VALID_INDEX } from "./assert";
+import { is_bitfield_field, read_bitfield, write_bitfield } from "./bitfield";
 import { is_enum_field, read_enum, write_enum } from "./enum";
 import { CStructError } from "./errors";
 import { is_pad_field } from "./pad";
@@ -35,6 +36,9 @@ function field_byte_size(type: FieldType): number {
     return type.size;
   }
   if (is_enum_field(type)) {
+    return primitive_size(type.storage);
+  }
+  if (is_bitfield_field(type)) {
     return primitive_size(type.storage);
   }
   throw new CStructError(`Unknown field type: ${String(type)}`);
@@ -155,6 +159,11 @@ function read_into<T extends object>(
       const raw = read_primitive(view, o, type.storage, endian);
       record[field.name] = read_enum(raw, type, field.name);
       o += primitive_size(type.storage);
+    } else if (is_bitfield_field(type)) {
+      need_bytes(bytes, o, primitive_size(type.storage), field.name);
+      const raw = read_primitive(view, o, type.storage, endian);
+      record[field.name] = read_bitfield(raw, type);
+      o += primitive_size(type.storage);
     } else if (is_primitive_type(type)) {
       need_bytes(bytes, o, primitive_size(type), field.name);
       record[field.name] = read_primitive(view, o, type, endian);
@@ -215,6 +224,15 @@ export function write<T extends object>(
           o,
           type.storage,
           write_enum(value, type, field.name),
+          endian
+        );
+        o += primitive_size(type.storage);
+      } else if (is_bitfield_field(type)) {
+        write_primitive(
+          view,
+          o,
+          type.storage,
+          write_bitfield(value, type, field.name),
           endian
         );
         o += primitive_size(type.storage);

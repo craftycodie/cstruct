@@ -16,9 +16,22 @@
       "includes": ["src/index.ts"],
       "linter": {
         "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          },
           "style": {
             "noExportedImports": "off",
             "noNamespace": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/bitfield.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noBitwiseOperators": "off"
           }
         }
       }

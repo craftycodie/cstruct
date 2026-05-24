@@ -16,3 +16,5 @@ class Packet {
 ```
 
 Values are validated on read and write. Use `pad_after` on the same field when the wire layout has trailing padding after a small enum storage type.
+
+For combinable flag bits in one integer, see [Bitfield enums](./bitfields.md).

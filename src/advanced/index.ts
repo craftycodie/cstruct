@@ -1,6 +1,7 @@
 import { AdvancedType } from "./advanced-type";
 
 export { AdvancedType, need_bytes } from "./advanced-type";
+export { Bool, CBool } from "./bool";
 export { CString, String } from "./string";
 export {
   CTime64,

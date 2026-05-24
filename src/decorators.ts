@@ -1,3 +1,5 @@
+import type { BitfieldField, BitfieldFlagDefinition } from "./bitfield";
+import { create_bitfield_field } from "./bitfield";
 import { compute_struct_size } from "./codec";
 import type { EnumField } from "./enum";
 import { create_enum_field } from "./enum";
@@ -22,7 +24,7 @@ export interface FieldOptions {
   pad_before?: number;
 }
 
-export { String, Time64, WString } from "./advanced";
+export { Bool, String, Time64, WString } from "./advanced";
 export { arm } from "./union";
 
 const STRUCT_FIELDS = Symbol.for("cstruct.struct.fields");
@@ -317,4 +319,26 @@ export const pad = (count: number): PadField => ({ kind: "pad", count });
  */
 export function enumType(storage: PrimitiveType, enumObj: object): EnumField {
   return create_enum_field(storage, enumObj);
+}
+
+/**
+ * Bitfield flags in an integer primitive: `c.bitfield("u32", flags)`.
+ *
+ * @example
+ * ```ts
+ * const Skulls = ["iron", "black_eye", "mythic"] as const;
+ *
+ * @c.struct()
+ * class Challenge {
+ *   @c.field(c.bitfield("u32", Skulls))
+ *   skulls!: c.Bitfield<typeof Skulls>;
+ * }
+ * ```
+ */
+export function bitfieldType(
+  storage: PrimitiveType,
+  flags: BitfieldFlagDefinition,
+  options?: { strict?: boolean }
+): BitfieldField {
+  return create_bitfield_field(storage, flags, options);
 }

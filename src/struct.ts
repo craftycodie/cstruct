@@ -1,4 +1,5 @@
 import type { AdvancedType } from "./advanced";
+import type { BitfieldField } from "./bitfield";
 import type { EnumField } from "./enum";
 import { CStructError } from "./errors";
 import type { PadField } from "./pad";
@@ -42,6 +43,7 @@ export type FieldType =
   | AdvancedType<unknown>
   | PadField
   | EnumField
+  | BitfieldField
   | UnionField
   | StructLayoutCtor
   | StructClass;

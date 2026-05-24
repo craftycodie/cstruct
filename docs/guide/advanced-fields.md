@@ -1,6 +1,6 @@
 # Advanced fields
 
-Advanced fields occupy one packed slot in a struct. Pass a factory (`c.String`, `c.Time64`, …) or an instance to `@c.field`. Multi-field layouts should use `@c.struct` instead.
+Advanced fields occupy one packed slot in a struct. Pass a factory (`c.Bool`, `c.String`, `c.Time64`, …) or an instance to `@c.field`. Multi-field layouts should use `@c.struct` instead.
 
 ## Custom types
 
@@ -53,7 +53,19 @@ class Pixel {
 const pixel = c.read(Pixel, c.write(Pixel, { color: [255, 128, 0] } as Pixel));
 ```
 
-Built-in helpers (`CString`, `CWString`, `CTime64`) are implemented the same way and are available on `c` if you need `instanceof` checks.
+Built-in helpers (`CBool`, `CString`, `CWString`, `CTime64`) are implemented the same way and are available on `c` if you need `instanceof` checks.
+
+## Boolean — `c.Bool()`
+
+One wire byte: `0` is false, any non-zero byte reads as true; writes `0` or `1` (matches blf_lib `Bool`):
+
+```ts
+@c.struct()
+class AuthorFlags {
+  @c.field(c.Bool())
+  is_online!: boolean;
+}
+```
 
 ## Latin-1 string — `c.String(n)`
 
@@ -91,4 +103,4 @@ class Event {
 }
 ```
 
-Factories: `c.String`, `c.WString`, and `c.Time64`. Classes: `c.CString`, `c.CWString`, and `c.CTime64`.
+Factories: `c.Bool`, `c.String`, `c.WString`, and `c.Time64`. Classes: `c.CBool`, `c.CString`, `c.CWString`, and `c.CTime64`.
