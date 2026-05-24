@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { c } from "@craftycodie/cstruct";
 import { describe, expect, it } from "vitest";
-import { c } from "../src/index";
 
 /** Reach `s_content_item_film_metadata` (16-byte union arm). */
 @c.struct()
@@ -157,7 +157,7 @@ class BlfChunkContentHeader {
   metadata!: ContentItemMetadata;
 }
 
-const CHDR_FIXTURE = join(import.meta.dirname, "chdr.bin");
+const CHDR_FIXTURE = join(import.meta.dirname, "./fixtures/chdr.bin");
 
 describe("chdr.bin fixture", () => {
   const bytes = new Uint8Array(readFileSync(CHDR_FIXTURE));

@@ -18,7 +18,7 @@
     "dist-cjs"
   ],
   "scripts": {
-    "build": "node scripts/prepare-build-src.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node scripts/write-cjs-package-json.mjs",
+    "build": "node scripts/clean-dist.mjs && node scripts/prepare-build-src.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node scripts/write-cjs-package-json.mjs",
     "check": "ultracite check",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "docs": "vitepress dev docs",
