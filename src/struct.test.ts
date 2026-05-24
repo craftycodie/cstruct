@@ -45,7 +45,7 @@ describe("@c.struct", () => {
     const bytes = new Uint8Array([0, 42]);
     const value = c.read(NestedHost, bytes, "big");
     expect(value.nested).toEqual({ value: 42 });
-    expect(c.size(NestedHost)).toBe(2);
+    expect(c.sizeof(NestedHost)).toBe(2);
   });
 
   it("reads primitives with pad_before", () => {
@@ -54,7 +54,7 @@ describe("@c.struct", () => {
     const value = c.read(ExampleStruct, bytes, "big");
     expect(value.field1).toBe(1);
     expect(value.field2).toBe(2);
-    expect(c.size(ExampleStruct)).toBe(10);
+    expect(c.sizeof(ExampleStruct)).toBe(10);
   });
 });
 
@@ -65,7 +65,7 @@ describe("@c.union", () => {
     const value = c.read(UnionHost, bytes, "big");
     expect(value.kind).toBe(1);
     expect(value.data).toEqual({ value: 42 });
-    expect(c.size(UnionHost)).toBe(5);
+    expect(c.sizeof(UnionHost)).toBe(5);
   });
 
   it("leaves the field null when the selector returns null", () => {

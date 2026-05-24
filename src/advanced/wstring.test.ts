@@ -9,7 +9,7 @@ class Label {
 
 describe("WString", () => {
   it("reads and writes UTF-16LE with NUL termination", () => {
-    expect(c.size(Label)).toBe(8);
+    expect(c.sizeof(Label)).toBe(8);
 
     const written = c.write(Label, { text: "ab" } as Label, "little");
     expect(written).toEqual(

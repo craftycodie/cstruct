@@ -224,7 +224,7 @@ export function unionField<T extends object>(
  *
  * const bytes = c.write(Example, { value: 42 } as Example, "big");
  * const instance = c.read(Example, bytes, "big");
- * console.log(c.size(Example)); // 4
+ * console.log(c.sizeof(Example)); // 4
  * ```
  */
 export function struct<T extends abstract new (...args: any) => object>() {

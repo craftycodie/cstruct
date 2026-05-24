@@ -10,7 +10,7 @@ Subclass `c.AdvancedType<T>` when you need a format that is not a primitive, nes
 - `read(bytes, offset, endian, label)` — decode bytes to `T`
 - `write(bytes, offset, value, endian, label)` — encode `T` into the buffer
 
-The codec calls these hooks during `c.read` / `c.write`; `c.size` includes `byteSize` in the struct total.
+The codec calls these hooks during `c.read` / `c.write`; `c.sizeof` includes `byteSize` in the struct total.
 
 ```ts
 import { c } from "@craftycodie/cstruct";

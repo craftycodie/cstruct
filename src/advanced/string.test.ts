@@ -15,7 +15,7 @@ class Author {
 
 describe("String", () => {
   it("reads and writes a NUL-terminated Latin-1 slot", () => {
-    expect(c.size(Tag)).toBe(8);
+    expect(c.sizeof(Tag)).toBe(8);
 
     const written = c.write(Tag, { name: "foo" } as Tag, "big");
     expect(written).toEqual(

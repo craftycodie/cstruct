@@ -6,7 +6,9 @@ Pass a `@c.struct()` class as the first argument:
 |----------|-------------|
 | `c.read(ctor, bytes, endian?)` | Parse bytes into an instance (slice `bytes` if the layout does not start at 0) |
 | `c.write(ctor, instance, endian?)` | Serialize to a new `Uint8Array` |
-| `c.size(ctor)` | Total packed size in bytes |
+| `c.sizeof(ctor)` | Total packed size in bytes |
+| `c.sizeof("u32")` | Size of a primitive type in bytes |
+| `c.json(ctor, instance)` | Struct fields as a JSON-friendly object |
 
 `endian` is `"little"` (default) or `"big"`.
 
@@ -31,7 +33,7 @@ Layout and validation failures throw `CStructError` (also `c.CStructError`).
 
 | Symbol | Role |
 |--------|------|
-| `read`, `write`, `size` | Struct serialization |
+| `read`, `write`, `sizeof`, `json` | Struct serialization |
 | `struct`, `field` | Define layouts |
 | `union`, `unionField`, `arm`, `when` | Discriminated unions |
 | `enum` | Integer enum slots |

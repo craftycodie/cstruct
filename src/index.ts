@@ -20,7 +20,7 @@ import {
   Time64 as time64Field,
   WString as wstringField,
 } from "./advanced";
-import { read, size, write } from "./codec";
+import { json, read, sizeof, write } from "./codec";
 import {
   arm,
   arrayType,
@@ -72,7 +72,8 @@ export const c = {
 
   read,
   write,
-  size,
+  sizeof,
+  json,
 
   AdvancedType,
   CBool,

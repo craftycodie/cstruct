@@ -20,7 +20,7 @@ describe("Time64", () => {
 
   it("reads and writes through a struct", () => {
     const when = new Date(1_577_836_800_000);
-    expect(c.size(Event)).toBe(8);
+    expect(c.sizeof(Event)).toBe(8);
 
     const written = c.write(Event, { when } as Event, "big");
     expect(written).toEqual(

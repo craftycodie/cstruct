@@ -19,7 +19,7 @@ class PaddedHeader {
 
 describe("padding", () => {
   it("skips pad_after bytes (16-byte film metadata slot)", () => {
-    expect(c.size(FilmMetadata)).toBe(16);
+    expect(c.sizeof(FilmMetadata)).toBe(16);
 
     const bytes = new Uint8Array(16);
     const view = new DataView(bytes.buffer);
@@ -38,7 +38,7 @@ describe("padding", () => {
   });
 
   it("honors pad_before and pad_after on fields", () => {
-    expect(c.size(PaddedHeader)).toBe(12);
+    expect(c.sizeof(PaddedHeader)).toBe(12);
 
     const bytes = new Uint8Array([0xab, 0xcd, 0, 0, 0, 0, 0, 0x10, 0, 0, 0, 0]);
     const read = c.read(PaddedHeader, bytes, "big");

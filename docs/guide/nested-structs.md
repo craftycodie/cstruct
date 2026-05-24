@@ -19,4 +19,4 @@ class Shape {
 }
 ```
 
-Nested structs are read and written inline; `c.size(Shape)` includes the full `Point` layout.
+Nested structs are read and written inline; `c.sizeof(Shape)` includes the full `Point` layout.

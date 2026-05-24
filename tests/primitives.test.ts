@@ -49,13 +49,26 @@ describe("primitives", () => {
   } satisfies AllPrimitives;
 
   it("reports packed size (42 bytes)", () => {
-    expect(c.size(AllPrimitives)).toBe(42);
+    expect(c.sizeof(AllPrimitives)).toBe(42);
+  });
+
+  it("reports primitive type sizes", () => {
+    expect(c.sizeof("u8")).toBe(1);
+    expect(c.sizeof("u16")).toBe(2);
+    expect(c.sizeof("u32")).toBe(4);
+    expect(c.sizeof("u64")).toBe(8);
+    expect(c.sizeof("i8")).toBe(1);
+    expect(c.sizeof("i16")).toBe(2);
+    expect(c.sizeof("i32")).toBe(4);
+    expect(c.sizeof("i64")).toBe(8);
+    expect(c.sizeof("f32")).toBe(4);
+    expect(c.sizeof("f64")).toBe(8);
   });
 
   for (const endian of ["little", "big"] as const) {
     it(`round-trips every primitive (${endian})`, () => {
       const written = c.write(AllPrimitives, sample, endian);
-      expect(written.length).toBe(c.size(AllPrimitives));
+      expect(written.length).toBe(c.sizeof(AllPrimitives));
 
       const read = c.read(AllPrimitives, written, endian);
       expect(read.u8).toBe(sample.u8);

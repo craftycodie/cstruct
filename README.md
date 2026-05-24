@@ -7,7 +7,7 @@ Declarative packed binary readers and writers for TypeScript, inspired by [binrw
 ## Features
 
 - Struct layouts with Stage 3 decorators (`@c.struct`, `@c.field`)
-- `c.read`, `c.write`, and `c.size` over `Uint8Array` with little or big endian
+- `c.read`, `c.write`, and `c.sizeof` over `Uint8Array` with little or big endian
 - Padding, nested structs, discriminated unions, and validated enums
 - Built-in `c.String`, `c.WString`, and `c.Time64`; extend with `c.AdvancedType`
 

@@ -80,8 +80,8 @@ class WithUnionArray {
 
 describe("arrays", () => {
   it("reports packed size for primitive arrays", () => {
-    expect(c.size(WithPrimitiveArray)).toBe(12);
-    expect(c.size(WithFieldCount)).toBe(4);
+    expect(c.sizeof(WithPrimitiveArray)).toBe(12);
+    expect(c.sizeof(WithFieldCount)).toBe(4);
   });
 
   it("round-trips primitive arrays", () => {
@@ -112,7 +112,7 @@ describe("arrays", () => {
       ],
     } satisfies WithStructArray;
     const written = c.write(WithStructArray, sample, "little");
-    expect(c.size(WithStructArray)).toBe(8);
+    expect(c.sizeof(WithStructArray)).toBe(8);
     expect(c.read(WithStructArray, written, "little")).toEqual(sample);
   });
 
@@ -151,7 +151,7 @@ describe("arrays", () => {
         [5, 6],
       ],
     } satisfies WithNestedArray;
-    expect(c.size(WithNestedArray)).toBe(24);
+    expect(c.sizeof(WithNestedArray)).toBe(24);
     const written = c.write(WithNestedArray, sample, "little");
     expect(c.read(WithNestedArray, written, "little")).toEqual(sample);
   });

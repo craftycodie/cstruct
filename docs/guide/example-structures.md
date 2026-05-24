@@ -37,7 +37,7 @@ class ContentItemCampaignMetadata {
   campaign_secondary_skulls!: number;
 }
 
-// c.size(ContentItemCampaignMetadata) === 16
+// c.sizeof(ContentItemCampaignMetadata) === 16
 
 const value = {
   campaign_id: 1,
@@ -149,7 +149,7 @@ const file = new Uint8Array([0xff, 0xff, ...inner]);
 
 const atOffset = c.read(
   ContentItemGeneralMetadata,
-  file.subarray(2, 2 + c.size(ContentItemGeneralMetadata)),
+  file.subarray(2, 2 + c.sizeof(ContentItemGeneralMetadata)),
   "little"
 );
 ```
