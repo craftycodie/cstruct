@@ -1,6 +1,6 @@
 {
   "name": "@craftycodie/cstruct",
-  "version": "1.0.0-alpha.9",
+  "version": "1.0.0-alpha.10",
   "description": "Stage 3 struct decorators for packed binary layouts",
   "type": "module",
   "main": "./dist-cjs/index.js",
