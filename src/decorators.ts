@@ -59,9 +59,7 @@ function is_field_options(value: unknown): value is FieldOptions {
     typeof value === "object" &&
     value !== null &&
     !("kind" in value) &&
-    ("pad_before" in value ||
-      "pad_after" in value ||
-      "count" in value)
+    ("pad_before" in value || "pad_after" in value || "count" in value)
   );
 }
 
@@ -164,9 +162,9 @@ export function field(
     }
 
     const resolved_type =
-      options?.count !== undefined
-        ? create_array_field(type, options.count)
-        : type;
+      options?.count === undefined
+        ? type
+        : create_array_field(type, options.count);
 
     field_list(context).push({
       name,

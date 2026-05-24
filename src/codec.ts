@@ -1,8 +1,8 @@
 import { is_advanced_type } from "./advanced";
 import {
+  type ArrayField,
   is_array_field,
   validate_array_length,
-  type ArrayField,
 } from "./array";
 import { assert, VALID_INDEX } from "./assert";
 import { is_bitfield_field, read_bitfield, write_bitfield } from "./bitfield";
@@ -13,7 +13,6 @@ import { is_pad_field } from "./pad";
 import {
   type Endian,
   is_primitive_type,
-  primitive_size,
   read_primitive,
   write_primitive,
 } from "./primitive";
@@ -24,8 +23,6 @@ import {
   struct_byte_size,
 } from "./struct";
 import { is_union_field, type UnionField } from "./union";
-
-export { field_byte_size } from "./field-size";
 
 export function compute_struct_size(fields: StructFieldMeta[]): number {
   let size = 0;
@@ -391,14 +388,7 @@ function read_into<T extends object>(
     } else if (is_union_field(type)) {
       o = read_union(record, bytes, o, endian, type);
     } else {
-      const result = read_element(
-        type,
-        bytes,
-        o,
-        endian,
-        field.name,
-        record
-      );
+      const result = read_element(type, bytes, o, endian, field.name, record);
       record[field.name] = result.value;
       o = result.offset;
     }

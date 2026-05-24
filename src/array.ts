@@ -1,5 +1,5 @@
-import { field_byte_size } from "./field-size";
 import { CStructError } from "./errors";
+import { field_byte_size } from "./field-size";
 import { is_pad_field } from "./pad";
 import type { FieldType } from "./struct";
 
@@ -25,7 +25,7 @@ export function create_array_field(
   count: number
 ): ArrayField {
   if (!Number.isInteger(count) || count < 0) {
-    throw new CStructError(`Field count must be a non-negative integer`);
+    throw new CStructError("Field count must be a non-negative integer");
   }
   if (is_pad_field(element)) {
     throw new CStructError(

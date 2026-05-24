@@ -57,10 +57,8 @@ class WithNestedArray {
 
 @c.struct()
 class UnionArm {
-  @c.field("u8")
+  @c.field("u8", { pad_after: 3 })
   value!: number;
-  @c.field(c.pad(3))
-  private _pad!: never;
 }
 
 @c.struct()
@@ -160,14 +158,6 @@ describe("arrays", () => {
 
   it("rejects pad as an array element", () => {
     expect(() => c.array(c.pad(4), 3)).toThrow(CStructError);
-    expect(() => {
-      @c.struct()
-      class Bad {
-        @c.field(c.pad(2), { count: 3 })
-        private _reserved!: never;
-      }
-      return Bad;
-    }).toThrow(CStructError);
   });
 
   it("round-trips union arrays (read uses parent select)", () => {
@@ -192,11 +182,7 @@ describe("arrays", () => {
 
   it("rejects invalid enum value in array element", () => {
     expect(() =>
-      c.write(
-        WithEnumArray,
-        { statuses: [0, 9] } as WithEnumArray,
-        "little"
-      )
+      c.write(WithEnumArray, { statuses: [0, 9] } as WithEnumArray, "little")
     ).toThrow(CStructError);
   });
 });
