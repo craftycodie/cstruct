@@ -1,11 +1,10 @@
-import { is_advanced_type } from "./advanced";
+import { CBitfield, is_advanced_type } from "./advanced";
 import {
   type ArrayField,
   is_array_field,
   validate_array_length,
 } from "./array";
 import { assert, VALID_INDEX } from "./assert";
-import { is_bitfield_field, read_bitfield, write_bitfield } from "./bitfield";
 import { is_enum_field, read_enum, write_enum } from "./enum";
 import { CStructError } from "./errors";
 import { field_byte_size } from "./field-size";
@@ -213,15 +212,6 @@ function read_element(
     };
   }
 
-  if (is_bitfield_field(element)) {
-    need_bytes(bytes, offset, size, label);
-    const raw = read_primitive(view, offset, element.storage, endian);
-    return {
-      value: read_bitfield(raw, element),
-      offset: offset + size,
-    };
-  }
-
   if (is_array_field(element)) {
     return read_array_elements(element, bytes, offset, endian, label, parent);
   }
@@ -287,17 +277,6 @@ function write_element(
       offset,
       element.storage,
       write_enum(value, element, label),
-      endian
-    );
-    return offset + size;
-  }
-
-  if (is_bitfield_field(element)) {
-    write_primitive(
-      view,
-      offset,
-      element.storage,
-      write_bitfield(value, element, label),
       endian
     );
     return offset + size;
@@ -502,10 +481,6 @@ function json_field_value(
     return value as number;
   }
 
-  if (is_bitfield_field(type)) {
-    return value as Record<string, boolean>;
-  }
-
   if (is_array_field(type)) {
     const items = value as unknown[];
     return items.map((item, i) =>
@@ -534,6 +509,9 @@ function json_field_value(
     }
     if (typeof value === "boolean" || typeof value === "string") {
       return value;
+    }
+    if (type instanceof CBitfield) {
+      return value as Record<string, boolean>;
     }
     throw new CStructError(
       `${label}: unsupported advanced value type ${typeof value}`

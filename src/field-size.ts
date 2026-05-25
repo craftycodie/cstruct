@@ -1,5 +1,4 @@
 import { is_advanced_type } from "./advanced";
-import { is_bitfield_field } from "./bitfield";
 import { is_enum_field } from "./enum";
 import { CStructError } from "./errors";
 import { is_pad_field } from "./pad";
@@ -35,9 +34,6 @@ export function field_byte_size(type: FieldType): number {
     return type.size;
   }
   if (is_enum_field(type)) {
-    return primitive_size(type.storage);
-  }
-  if (is_bitfield_field(type)) {
     return primitive_size(type.storage);
   }
   if (is_array_field(type)) {

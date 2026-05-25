@@ -40,7 +40,7 @@ console.log(parsed.favorite_bone); // 18
 console.log(parsed.name); // "Rudy"
 ```
 
-For guides, API reference, and more examples, see the [documentation](https://craftycodie.github.io/cstruct/).
+For guides, API reference, changelog, and more examples, see the [documentation](https://craftycodie.github.io/cstruct/).
 
 ## Install
 

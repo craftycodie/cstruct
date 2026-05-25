@@ -18,6 +18,14 @@ console.log(instance.value); // 42
 console.log(c.sizeof(Example)); // 4
 ```
 
+**C equivalent** — a plain struct with no padding between members when that is all you declare:
+
+```c
+typedef struct {
+    uint32_t value; /* c.field("u32") — 4 bytes; endian from c.read / c.write */
+} Example;
+```
+
 - `c.read(ctor, bytes, endian?)` — parse into a new instance (`endian`: `"little"` default or `"big"`). Slice the buffer first if the struct does not start at index 0.
 - `c.write(ctor, instance, endian?)` — serialize to a new `Uint8Array`.
 - `c.sizeof(ctor)` — total packed size in bytes (`c.sizeof("u32")` → `4` for primitives).

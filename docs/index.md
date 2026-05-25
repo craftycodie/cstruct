@@ -70,9 +70,9 @@ console.log(c.sizeof(Dog)); // 19
 
 **Scalars & layout** — Fixed-width integers and floats, `bigint` u64/i64, explicit padding, and nested structs. Field order and size come from the class definition, not hand-maintained offsets.
 
-**Discriminated data** — Validated enums, discriminated unions (`@c.union`, `c.arm`, `c.when`), fixed-length arrays, and bitfield enums for flag words.
+**Discriminated data** — Validated enums, discriminated unions (`@c.union`, `c.arm`, `c.when`), and fixed-length arrays.
 
-**Custom encodings** — Built-in `c.String`, `c.WString`, and `c.Time64`, or subclass `c.AdvancedType` for your own wire format in a single field slot.
+**Advanced fields** — Built-in `c.Bool`, `c.String`, `c.WString`, `c.Time64`, and `c.bitfield` for flag words, or subclass `c.AdvancedType` for your own wire format in a single field slot.
 
 ## Get started
 
@@ -92,8 +92,9 @@ Import `{ c }` from `@craftycodie/cstruct` **before** any `@c.struct()` class so
 | Variant layouts | [Unions](/guide/unions) |
 | Stored enum values | [Enums](/guide/enums) |
 | Repeated fields | [Arrays](/guide/arrays) |
-| Flag words | [Bitfield enums](/guide/bitfields) |
-| Strings, time, custom types | [Advanced fields](/guide/advanced-fields) |
+| Flag words | [Bitfield](/guide/advanced-fields/bitfield) |
+| Strings, time, custom types | [Advanced fields](/guide/advanced-fields/) |
 | Real-world layouts | [Example structures](/guide/example-structures) |
 | Testing with decorators | [Vitest & SWC](/guide/vitest) |
 | `read` / `write` / `sizeof` | [Struct I/O API](/guide/api) |
+| Release history | [Changelog](/changelog) |

@@ -38,6 +38,7 @@ export default defineConfig({
     nav: [
       { text: "Guide", link: "/guide/quick-start" },
       { text: "API", link: "/guide/api" },
+      { text: "Changelog", link: "/changelog" },
       {
         text: "npm",
         link: "https://www.npmjs.com/package/@craftycodie/cstruct",
@@ -64,8 +65,19 @@ export default defineConfig({
           { text: "Unions", link: "/guide/unions" },
           { text: "Enums", link: "/guide/enums" },
           { text: "Arrays", link: "/guide/arrays" },
-          { text: "Bitfield enums", link: "/guide/bitfields" },
-          { text: "Advanced fields", link: "/guide/advanced-fields" },
+        ],
+      },
+      {
+        text: "Advanced fields",
+        collapsed: false,
+        items: [
+          { text: "Overview", link: "/guide/advanced-fields/" },
+          { text: "Custom types", link: "/guide/advanced-fields/custom-types" },
+          { text: "Bool", link: "/guide/advanced-fields/bool" },
+          { text: "String", link: "/guide/advanced-fields/string" },
+          { text: "WString", link: "/guide/advanced-fields/wstring" },
+          { text: "Time64", link: "/guide/advanced-fields/time64" },
+          { text: "Bitfield", link: "/guide/advanced-fields/bitfield" },
         ],
       },
       {
@@ -77,7 +89,10 @@ export default defineConfig({
       },
       {
         text: "Reference",
-        items: [{ text: "Struct I/O API", link: "/guide/api" }],
+        items: [
+          { text: "Struct I/O API", link: "/guide/api" },
+          { text: "Changelog", link: "/changelog" },
+        ],
       },
     ],
     socialLinks: [

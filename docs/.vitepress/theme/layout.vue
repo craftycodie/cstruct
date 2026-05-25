@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import DefaultTheme from "vitepress/theme";
-
-const { Layout: DefaultLayout } = DefaultTheme;
 </script>
 
 <template>
   <div class="cstruct-layout">
     <div class="cstruct-hero-bg" aria-hidden="true" />
-    <DefaultLayout />
+    <DefaultTheme.Layout />
   </div>
 </template>
 

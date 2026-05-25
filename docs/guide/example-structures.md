@@ -2,7 +2,7 @@
 
 These layouts are modeled on [blf_lib](https://github.com/craftycodie/blf) Reach TU1 definitions (`saved_game_files.rs`, `s_blf_chunk_content_header`). cstruct handles **packed struct I/O** — fixed layouts, padding, nested structs, unions, and advanced fields (`Time64`, `String`, `WString`). It does **not** handle bitstreams or fields whose size depends on runtime bit reads.
 
-For union and advanced-field APIs, see [Unions](./unions.md) and [Advanced fields](./advanced-fields.md).
+For union and advanced-field APIs, see [Unions](./unions.md) and [Advanced fields](./advanced-fields/).
 
 Runnable copies of these examples live in:
 

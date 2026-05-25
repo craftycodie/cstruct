@@ -12,6 +12,14 @@ class Header {
 }
 ```
 
+**C equivalent** — a fixed-size member array; elements are laid out back-to-back with no gaps:
+
+```c
+typedef struct {
+    uint32_t values[4]; /* c.field("u32", { count: 4 }) — 16 bytes total */
+} Header;
+```
+
 ## `c.array`
 
 Use `c.array(element, count)` for nested arrays and non-primitive element types:
@@ -23,6 +31,17 @@ matrix!: number[][];
 @c.field(c.array(c.bitfield("u8", ["a", "b"]), 2))
 flags!: c.Bitfield<["a", "b"]>[];
 ```
+
+**C equivalent** — nested arrays and repeated non-primitive slots use the same contiguous packing:
+
+```c
+typedef struct {
+    uint32_t matrix[3][4]; /* c.array(c.array("u32", 4), 3) — row-major, 48 bytes */
+    uint8_t flags[2];      /* c.array(c.bitfield("u8", ["a", "b"]), 2) — one packed u8 per slot */
+} Layout;
+```
+
+Each `flags[i]` is a single byte with bits 0 (`a`) and 1 (`b`), same as [Bitfield](./advanced-fields/bitfield.md). cstruct decodes every slot to `{ a: boolean, b: boolean }` on read.
 
 `@c.field(type, { count: n })` is equivalent to `@c.field(c.array(type, n))` for a single level.
 

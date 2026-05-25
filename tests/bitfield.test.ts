@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  bitfield_from_raw,
-  bitfield_to_raw,
-  CStructError,
-  c,
-  create_bitfield_field,
-} from "../src/index";
+import { CStructError, c } from "../src/index";
 
 /** Reach `e_challenge_difficulty_flags` (sequential bits in u8). */
 const DifficultyFlags = {
@@ -25,6 +19,18 @@ class ChallengeFlags {
 
   @c.field(c.bitfield("u32", SkullFlags))
   skulls!: c.Bitfield<typeof SkullFlags>;
+}
+
+@c.struct()
+class DifficultyOnly {
+  @c.field(c.bitfield("u8", DifficultyFlags))
+  difficulty!: c.Bitfield<typeof DifficultyFlags>;
+}
+
+@c.struct()
+class StrictDifficulty {
+  @c.field(c.bitfield("u8", DifficultyFlags, { strict: true }))
+  difficulty!: c.Bitfield<typeof DifficultyFlags>;
 }
 
 describe("bitfield", () => {
@@ -59,10 +65,9 @@ describe("bitfield", () => {
     expect(read).toEqual(value);
   });
 
-  it("ignores reserved bits by default", () => {
-    const field = create_bitfield_field("u8", DifficultyFlags);
-    const decoded = bitfield_from_raw(0b1111_1111, field);
-    expect(decoded).toEqual({
+  it("ignores reserved bits by default on read", () => {
+    const read = c.read(DifficultyOnly, new Uint8Array([0xff]), "little");
+    expect(read.difficulty).toEqual({
       easy: true,
       normal: true,
       heroic: true,
@@ -70,39 +75,21 @@ describe("bitfield", () => {
     });
   });
 
-  it("strict mode rejects reserved bits", () => {
-    const field = create_bitfield_field("u8", DifficultyFlags, {
-      strict: true,
-    });
-    expect(() => bitfield_from_raw(0b0001_0000, field)).toThrow(CStructError);
-  });
-
-  it("packs and unpacks via helpers", () => {
-    const field = create_bitfield_field("u32", SkullFlags);
-    const raw = bitfield_to_raw(
-      { iron: true, black_eye: false, tough_luck: false, catch: true },
-      field,
-      "skulls"
-    );
-    expect(raw).toBe(0b1001); // bits 0 and 3
-    expect(bitfield_from_raw(raw, field)).toEqual({
-      iron: true,
-      black_eye: false,
-      tough_luck: false,
-      catch: true,
-    });
+  it("strict mode rejects reserved bits on read", () => {
+    expect(() =>
+      c.read(StrictDifficulty, new Uint8Array([0x10]), "little")
+    ).toThrow(CStructError);
   });
 
   it("rejects unknown flag keys on write", () => {
-    const field = create_bitfield_field("u8", DifficultyFlags);
     expect(() =>
-      bitfield_to_raw({ easy: true, unknown: true }, field, "difficulty")
+      c.write(DifficultyOnly, {
+        difficulty: { easy: true, unknown: true },
+      } as unknown as DifficultyOnly)
     ).toThrow(CStructError);
   });
 
   it("rejects duplicate bit indices in the definition", () => {
-    expect(() => create_bitfield_field("u8", { a: 0, b: 0 })).toThrow(
-      CStructError
-    );
+    expect(() => c.bitfield("u8", { a: 0, b: 0 })).toThrow(CStructError);
   });
 });

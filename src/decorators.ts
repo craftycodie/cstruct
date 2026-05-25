@@ -1,6 +1,6 @@
+import type { BitfieldFlagDefinition } from "./advanced";
+import { CBitfield } from "./advanced";
 import { create_array_field } from "./array";
-import type { BitfieldField, BitfieldFlagDefinition } from "./bitfield";
-import { create_bitfield_field } from "./bitfield";
 import { compute_struct_size } from "./codec";
 import type { EnumField } from "./enum";
 import { create_enum_field } from "./enum";
@@ -347,8 +347,8 @@ export function bitfieldType(
   storage: PrimitiveType,
   flags: BitfieldFlagDefinition,
   options?: { strict?: boolean }
-): BitfieldField {
-  return create_bitfield_field(storage, flags, options);
+): CBitfield {
+  return new CBitfield(storage, flags, options);
 }
 
 /**

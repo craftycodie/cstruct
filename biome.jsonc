@@ -27,7 +27,7 @@
       }
     },
     {
-      "includes": ["src/bitfield.ts"],
+      "includes": ["src/advanced/bitfield.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -92,6 +92,27 @@
           "complexity": {
             "noBannedTypes": "off",
             "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["docs/.vitepress/**/*.vue"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["docs/.vitepress/theme/style.css"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
           }
         }
       }

@@ -1,6 +1,6 @@
-# Bitfield enums
+# Bitfield — `c.bitfield(storage, flags)`
 
-Flag groups packed into an integer primitive use `c.bitfield(storage, flags)`. Each flag is a **boolean** on read/write; the codec packs them into sequential or explicit bit indices.
+Flag groups packed into an integer primitive are an [advanced field](./index.md): `c.bitfield()` returns a `c.CBitfield` instance (subclass of `c.AdvancedType`). Each flag is a **boolean** on read/write; the codec packs them into sequential or explicit bit indices inside the storage width (`u8`, `u32`, …).
 
 ## Sequential flags
 
@@ -35,6 +35,21 @@ const bytes = c.write(Challenge, chunk, "big");
 // u32 = 0b101 (bits 0 and 2 set: iron + tough_luck)
 ```
 
+**C equivalent** — sequential bit indices (array position → bit number). A single storage integer plus named masks is the usual portable pattern:
+
+```c
+#define SKULL_IRON        (1u << 0)
+#define SKULL_BLACK_EYE   (1u << 1)
+#define SKULL_TOUGH_LUCK  (1u << 2)
+#define SKULL_CATCH       (1u << 3)
+
+typedef struct {
+    uint32_t skulls; /* c.bitfield("u32", SkullFlags) */
+} Challenge;
+
+/* iron + tough_luck set: skulls == 0x5 */
+```
+
 ## Explicit bit indices
 
 Use a `as const` map when bits are sparse or non-sequential:
@@ -54,6 +69,25 @@ class Challenge {
 }
 ```
 
+**C equivalent** — sparse indices from the `as const` map:
+
+```c
+#define DIFF_EASY       (1u << 0)
+#define DIFF_NORMAL     (1u << 1)
+#define DIFF_HEROIC     (1u << 2)
+#define DIFF_LEGENDARY  (1u << 3)
+
+typedef struct {
+    uint8_t difficulty; /* c.bitfield("u8", DifficultyFlags) */
+} Challenge;
+
+/* Test flags:  difficulty & DIFF_HEROIC */
+/* Set flags:     difficulty |= DIFF_EASY | DIFF_NORMAL */
+/* Clear flags:   difficulty &= ~DIFF_LEGENDARY */
+```
+
+cstruct exposes each name as a `boolean` on read/write; in C you combine flags with `|`, `&`, and `~` on the integer.
+
 ## Reserved bits
 
 By default, **unknown bits are preserved logically** on read (each named flag still decodes correctly). They are cleared on write because only named flags are packed.
@@ -65,18 +99,6 @@ To reject values with bits outside your definition:
 difficulty!: c.Bitfield<typeof DifficultyFlags>;
 ```
 
-## Standalone pack/unpack
-
-Outside a struct field:
-
-```ts
-import { bitfield_from_raw, bitfield_to_raw, create_bitfield_field } from "@craftycodie/cstruct";
-
-const field = create_bitfield_field("u32", SkullFlags);
-const raw = bitfield_to_raw({ iron: true, tough_luck: false }, field, "skulls");
-const flags = bitfield_from_raw(raw, field);
-```
-
 ## vs `c.enum`
 
 | | `c.enum` | `c.bitfield` |
@@ -84,3 +106,6 @@ const flags = bitfield_from_raw(raw, field);
 | Value | One of N discrete values | Bit mask (combinable flags) |
 | TypeScript | `number` | `{ flag: boolean, ... }` |
 | Validation | Must match a single enum member | Any combination of named bits |
+| Implementation | Integer slot + enum map | `c.CBitfield` (`c.AdvancedType`) |
+
+For a single true/false byte (not combinable flags), use [Boolean](./bool.md) instead.

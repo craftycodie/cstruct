@@ -19,7 +19,7 @@ const out = c.write(MyStruct, { value: 1 } as MyStruct);
 
 ## Advanced field types
 
-Built-in helpers (`c.String`, `c.WString`, `c.Time64`) and custom encodings share the same extension point: subclass `c.AdvancedType` and pass an instance to `@c.field`. See [Advanced fields](/guide/advanced-fields#custom-types).
+Built-in helpers (`c.Bool`, `c.String`, `c.WString`, `c.Time64`, `c.bitfield`) and custom encodings share the same extension point: subclass `c.AdvancedType` and pass an instance to `@c.field`. See [Advanced fields](/guide/advanced-fields/).
 
 ## Types on `c`
 
@@ -39,5 +39,5 @@ Layout and validation failures throw `CStructError` (also `c.CStructError`).
 | `enum` | Integer enum slots |
 | `pad` | Reserved zero bytes |
 | `AdvancedType` | Base class for custom single-slot encodings |
-| `String`, `WString`, `Time64` | Advanced field factories |
-| `CString`, `CWString`, `CTime64` | Advanced field classes |
+| `Bool`, `String`, `WString`, `Time64`, `bitfield` | Advanced field factories |
+| `CBool`, `CString`, `CWString`, `CTime64`, `CBitfield` | Advanced field classes |

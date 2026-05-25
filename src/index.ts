@@ -12,6 +12,7 @@ if (typeof symbolRef.metadata === "undefined") {
 import {
   AdvancedType,
   Bool as boolField,
+  CBitfield,
   CBool,
   CString,
   CTime64,
@@ -33,16 +34,7 @@ import {
   unionField,
 } from "./decorators";
 
-export type {
-  Bitfield,
-  BitfieldField,
-  BitfieldFlagDefinition,
-} from "./bitfield";
-export {
-  bitfield_from_raw,
-  bitfield_to_raw,
-  create_bitfield_field,
-} from "./bitfield";
+export type { Bitfield, BitfieldFlagDefinition } from "./advanced";
 
 import { CStructError } from "./errors";
 import { CSTRUCT_LAYOUT } from "./struct";
@@ -76,6 +68,7 @@ export const c = {
   json,
 
   AdvancedType,
+  CBitfield,
   CBool,
   CString,
   CWString,
@@ -104,12 +97,11 @@ export namespace c {
   export type FieldOptions = import("./decorators").FieldOptions;
   export type PadField = import("./pad").PadField;
   export type EnumField = import("./enum").EnumField;
-  export type BitfieldField = import("./bitfield").BitfieldField;
   export type ArrayField = import("./array").ArrayField;
   export type BitfieldFlagDefinition =
-    import("./bitfield").BitfieldFlagDefinition;
+    import("./advanced").BitfieldFlagDefinition;
   export type Bitfield<T extends BitfieldFlagDefinition> =
-    import("./bitfield").Bitfield<T>;
+    import("./advanced").Bitfield<T>;
   export type StructClass = import("./union").StructClass;
   export type UnionSelect<T extends object = object> =
     import("./union").UnionSelect<T>;
