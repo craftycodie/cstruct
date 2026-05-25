@@ -109,3 +109,10 @@ difficulty!: c.Bitfield<typeof DifficultyFlags>;
 | Implementation | Integer slot + enum map | `c.CBitfield` (`c.AdvancedType`) |
 
 For a single true/false byte (not combinable flags), use [Boolean](./bool.md) instead.
+
+## Looking for Feedback
+
+This Bitfield Advanced Type is quite opinionated and in practice it doesn't comfortably suit all applications. In particular, we've found it cumbersome when integrating with other binary serialization libraries for multi-format structures. 
+
+If you have any better ideas we suggest that you extend the AdvancedType class and implement your own take on this.
+If it goes well, consider contributing back here!
