@@ -1,0 +1,274 @@
+/**
+ * cstruct docs — dark theme with purple highlights
+ * https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/vars.css
+ */
+
+html.dark body {
+  background-color: #0a080e;
+}
+
+.dark {
+  --vp-sidebar-bg-color: rgba(12, 10, 16, 0.72);
+}
+
+.dark .VPContent,
+.dark .VPNavBar,
+.dark .VPSidebar,
+.dark .VPLocalNav,
+.dark .VPDoc .container,
+.dark .VPDoc .content,
+.dark .VPDoc .aside-container,
+.dark .VPFooter {
+  background-color: transparent;
+}
+
+.dark .VPNavBar,
+.dark .VPSidebar,
+.dark .VPLocalNav,
+.dark .VPFooter {
+  background-color: rgba(10, 8, 14, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+.dark .VPNavBar {
+  background-color: rgba(10, 8, 14, 0.75);
+}
+
+.dark .VPNavBar:not(.scrolled) {
+  background-color: rgba(10, 8, 14, 0.5);
+}
+
+.dark .VPSidebar .curtain {
+  background-color: rgba(10, 8, 14, 0.75);
+}
+
+.dark .VPDoc .aside-curtain {
+  background: linear-gradient(transparent, rgba(10, 8, 14, 0.8) 70%);
+}
+
+.dark div[class*="language-"],
+.dark .vp-code-group,
+.dark .vp-adaptive-theme {
+  background-color: rgba(18, 14, 24, 0.9);
+}
+
+.dark {
+  /* Palette — purple accents */
+  --vp-c-purple-1: #c4b5fd;
+  --vp-c-purple-2: #a78bfa;
+  --vp-c-purple-3: #7c3aed;
+  --vp-c-purple-soft: rgba(167, 139, 250, 0.14);
+
+  /* Surfaces — near-black with a slight purple cast */
+  --vp-c-bg: #0a080e;
+  --vp-c-bg-alt: #100c14;
+  --vp-c-bg-elv: #16121c;
+  --vp-c-bg-soft: #141018;
+
+  /* Borders & dividers */
+  --vp-c-border: #352a44;
+  --vp-c-divider: #261e32;
+  --vp-c-gutter: #08060a;
+
+  /* Text */
+  --vp-c-text-1: #ebe6f2;
+  --vp-c-text-2: #a89bb5;
+  --vp-c-text-3: #6b5f78;
+
+  /* Brand = purple */
+  --vp-c-brand-1: var(--vp-c-purple-1);
+  --vp-c-brand-2: var(--vp-c-purple-2);
+  --vp-c-brand-3: var(--vp-c-purple-3);
+  --vp-c-brand-soft: var(--vp-c-purple-soft);
+
+  --vp-c-tip-1: var(--vp-c-purple-1);
+  --vp-c-tip-2: var(--vp-c-purple-2);
+  --vp-c-tip-3: var(--vp-c-purple-3);
+  --vp-c-tip-soft: var(--vp-c-purple-soft);
+
+  --vp-c-note-1: var(--vp-c-purple-1);
+  --vp-c-note-2: var(--vp-c-purple-2);
+  --vp-c-note-3: var(--vp-c-purple-3);
+  --vp-c-note-soft: var(--vp-c-purple-soft);
+
+  --vp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(124, 58, 237, 0.05);
+  --vp-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(124, 58, 237, 0.08);
+  --vp-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(124, 58, 237, 0.1);
+  --vp-shadow-4: 0 20px 48px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(124, 58, 237, 0.12);
+}
+
+:root {
+  --vp-c-brand-1: var(--vp-c-purple-1);
+  --vp-c-brand-2: var(--vp-c-purple-2);
+  --vp-c-brand-3: var(--vp-c-purple-3);
+  --vp-c-brand-soft: var(--vp-c-purple-soft);
+
+  --vp-c-tip-1: var(--vp-c-brand-1);
+  --vp-c-tip-2: var(--vp-c-brand-2);
+  --vp-c-tip-3: var(--vp-c-brand-3);
+  --vp-c-tip-soft: var(--vp-c-brand-soft);
+}
+
+:root {
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: var(--vp-c-white);
+  --vp-button-brand-bg: var(--vp-c-brand-3);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: var(--vp-c-white);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: var(--vp-c-white);
+  --vp-button-brand-active-bg: var(--vp-c-brand-1);
+}
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #c4b5fd 30%,
+    #a78bfa 70%
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #7c3aed 50%,
+    #a78bfa 50%
+  );
+}
+
+:root {
+  --vp-custom-block-tip-border: var(--vp-c-brand-1);
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: rgba(167, 139, 250, 0.1);
+}
+
+.dark .VPNav.scrolled {
+  border-bottom-color: var(--vp-c-divider);
+  box-shadow: 0 1px 0 rgba(124, 58, 237, 0.1);
+}
+
+.dark .VPSidebarItem.is-active > .item > .link {
+  color: var(--vp-c-brand-1);
+}
+
+.dark :not(pre) > code {
+  color: var(--vp-c-purple-1);
+  background-color: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.dark div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.dark table th {
+  background-color: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-divider);
+}
+
+.dark table td {
+  border-color: var(--vp-c-divider);
+}
+
+.dark blockquote {
+  border-left-color: var(--vp-c-brand-2);
+  background-color: var(--vp-c-brand-soft);
+}
+
+/* Links in prose */
+.dark .vp-doc a {
+  color: var(--vp-c-brand-1);
+}
+
+.dark .vp-doc a:hover {
+  color: var(--vp-c-brand-2);
+}
+
+/* —— Overview hero title —— */
+.cstruct-hero {
+  margin: 0 0 2.5rem;
+  padding: 0.5rem 0 2rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.cstruct-title {
+  font-family: "JetBrains Mono", var(--vp-font-family-mono);
+  font-size: clamp(2.75rem, 8vw, 4.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: none;
+}
+
+.cstruct-title-c {
+  color: #c4b5fd;
+}
+
+.cstruct-title-rest {
+  color: #f5f3ff;
+}
+
+.cstruct-lead {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--vp-c-text-2);
+  max-width: 40rem;
+  margin: 0 0 1rem;
+}
+
+.cstruct-lead code {
+  font-family: "JetBrains Mono", var(--vp-font-family-mono);
+  font-size: 0.92em;
+  color: var(--vp-c-purple-1);
+  background-color: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.cstruct-lead a {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-decoration-color: rgba(167, 139, 250, 0.45);
+  text-underline-offset: 3px;
+}
+
+.cstruct-meta {
+  font-family: "JetBrains Mono", var(--vp-font-family-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--vp-c-text-3);
+  margin: 0;
+}
+
+.cstruct-meta a {
+  color: var(--vp-c-brand-2);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.cstruct-meta a:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.cstruct-meta-sep {
+  margin: 0 0.5rem;
+  opacity: 0.5;
+}
+
+/* Nav logo — default sans; hero title uses JetBrains Mono */
+.VPNavBarTitle .title {
+  font-family: var(--vp-font-family-base);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  letter-spacing: -0.02em;
+  color: var(--vp-c-text-1);
+  transition: color 0.15s ease;
+}
+
+.VPNavBarTitle a:hover .title {
+  color: var(--vp-c-brand-1);
+}
