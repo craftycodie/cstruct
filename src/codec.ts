@@ -1,4 +1,4 @@
-import { CBitfield, is_advanced_type } from "./advanced";
+import { is_advanced_type } from "./advanced";
 import {
   type ArrayField,
   is_array_field,
@@ -23,7 +23,7 @@ import {
   is_struct_constructor,
   struct_byte_size,
 } from "./struct";
-import { is_union_field, type StructClass, type UnionField } from "./union";
+import { is_union_field, type UnionField } from "./union";
 
 export function compute_struct_size(fields: StructFieldMeta[]): number {
   let size = 0;
@@ -417,131 +417,6 @@ export function write<T extends object>(
   }
 
   return bytes;
-}
-
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-
-function json_primitive_value(value: unknown, type: PrimitiveType): JsonValue {
-  if (type === "u64" || type === "i64") {
-    if (typeof value !== "bigint") {
-      throw new CStructError(
-        `Expected bigint for ${type}, got ${typeof value}`
-      );
-    }
-    return value.toString();
-  }
-  return value as number;
-}
-
-function resolve_union_arm_ctor(
-  union: UnionField,
-  parent: Record<string, unknown>,
-  value: unknown,
-  label: string
-): StructClass | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  const object = value as object;
-  for (const arm of union.arms) {
-    if (object instanceof arm) {
-      return arm;
-    }
-  }
-  const index = union.select(parent as object);
-  if (index !== null) {
-    return union.arms[index] ?? null;
-  }
-  throw new CStructError(
-    `${label}: value does not match any union arm and parent select returned null`
-  );
-}
-
-function json_field_value(
-  value: unknown,
-  type: FieldType,
-  parent: Record<string, unknown>,
-  label: string
-): JsonValue {
-  if (is_pad_field(type)) {
-    throw new CStructError(`Cannot serialize pad field ${label}`);
-  }
-
-  if (is_primitive_type(type)) {
-    return json_primitive_value(value, type);
-  }
-
-  if (is_enum_field(type)) {
-    return value as number;
-  }
-
-  if (is_array_field(type)) {
-    const items = value as unknown[];
-    return items.map((item, i) =>
-      json_field_value(item, type.element, parent, `${label}[${i}]`)
-    );
-  }
-
-  if (is_union_field(type)) {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    const arm = resolve_union_arm_ctor(type, parent, value, label);
-    if (arm === null) {
-      return null;
-    }
-    return json(arm, value as object);
-  }
-
-  if (is_struct_constructor(type)) {
-    return json(type, value as object);
-  }
-
-  if (is_advanced_type(type)) {
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    if (typeof value === "boolean" || typeof value === "string") {
-      return value;
-    }
-    if (type instanceof CBitfield) {
-      return value as Record<string, boolean>;
-    }
-    throw new CStructError(
-      `${label}: unsupported advanced value type ${typeof value}`
-    );
-  }
-
-  throw new CStructError(`Unknown field type on ${label}`);
-}
-
-/** Serialize a `@c.struct()` instance to a plain JSON-friendly object (struct fields only). */
-export function json<T extends object>(
-  ctor: new () => T,
-  instance: T
-): Record<string, JsonValue> {
-  const record = instance as Record<string, unknown>;
-  const out: Record<string, JsonValue> = {};
-
-  for (const field of get_struct_meta(ctor).fields) {
-    if (is_pad_field(field.type)) {
-      continue;
-    }
-    out[field.name] = json_field_value(
-      record[field.name],
-      field.type,
-      record,
-      field.name
-    );
-  }
-
-  return out;
 }
 
 /** Packed byte size of a `@c.struct()` class or primitive type. */

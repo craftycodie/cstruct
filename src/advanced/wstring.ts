@@ -1,3 +1,4 @@
+import { CStructError } from "../errors";
 import type { Endian } from "../primitive";
 import { AdvancedType, need_bytes } from "./advanced-type";
 
@@ -69,7 +70,7 @@ function encode_utf16le(value: string, max_bytes: number): Uint8Array {
 }
 
 /** UTF-16LE wide string with a fixed character capacity (NUL-terminated). */
-export class CWString extends AdvancedType<string> {
+export class CWString extends AdvancedType<string, string> {
   readonly byteSize: number;
   readonly chars: number;
 
@@ -111,6 +112,17 @@ export class CWString extends AdvancedType<string> {
     const le_bytes = encode_utf16le(value, this.byteSize);
     const encoded = endian === "little" ? le_bytes : swap_utf16(le_bytes);
     bytes.set(encoded, offset);
+  }
+
+  toJson(value: string): string {
+    return value;
+  }
+
+  fromJson(value: unknown, label: string): string {
+    if (typeof value !== "string") {
+      throw new CStructError(`${label}: expected string`);
+    }
+    return value;
   }
 }
 

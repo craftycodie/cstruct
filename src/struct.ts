@@ -2,6 +2,7 @@ import type { AdvancedType } from "./advanced";
 import type { ArrayField } from "./array";
 import type { EnumField } from "./enum";
 import { CStructError } from "./errors";
+import type { JsonValue } from "./json";
 import type { PadField } from "./pad";
 import type { PrimitiveType } from "./primitive";
 import type { StructClass, UnionField } from "./union";
@@ -40,7 +41,7 @@ export function is_struct_constructor(type: unknown): type is StructLayoutCtor {
 
 export type FieldType =
   | PrimitiveType
-  | AdvancedType<unknown>
+  | AdvancedType<unknown, JsonValue>
   | PadField
   | EnumField
   | ArrayField

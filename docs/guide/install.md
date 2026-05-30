@@ -19,7 +19,7 @@ Import from `@craftycodie/cstruct` before any `@c.struct()` class so the `Symbol
 
 ## Struct I/O
 
-After `@c.struct()`, use `c.read`, `c.write`, `c.sizeof`, and `c.json` with the class constructor:
+After `@c.struct()`, use `c.read`, `c.write`, `c.sizeof`, `c.toJson`, and `c.fromJson` with the class constructor:
 
 ```ts
 import { c } from "@craftycodie/cstruct";

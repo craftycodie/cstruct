@@ -29,7 +29,10 @@ typedef struct {
 - `c.read(ctor, bytes, endian?)` — parse into a new instance (`endian`: `"little"` default or `"big"`). Slice the buffer first if the struct does not start at index 0.
 - `c.write(ctor, instance, endian?)` — serialize to a new `Uint8Array`.
 - `c.sizeof(ctor)` — total packed size in bytes (`c.sizeof("u32")` → `4` for primitives).
-- `c.json(ctor, instance)` — struct fields as a JSON-friendly object.
+- `c.toJson(ctor, instance)` — struct fields as a JSON-friendly object.
+- `c.fromJson(ctor, data)` — build class instances from that shape (nested structs included).
+
+See [JSON encoding](/guide/json) for when to use JSON I/O, field mapping, and custom types.
 
 Read from an offset inside a larger buffer (file header + payload, chunk tables, etc.):
 

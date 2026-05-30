@@ -14,14 +14,18 @@ import {
   Bool as boolField,
   CBitfield,
   CBool,
+  CI64,
   CString,
   CTime64,
+  CU64,
   CWString,
+  I64 as i64Field,
   String as stringField,
   Time64 as time64Field,
+  U64 as u64Field,
   WString as wstringField,
 } from "./advanced";
-import { json, read, sizeof, write } from "./codec";
+import { read, sizeof, write } from "./codec";
 import {
   arm,
   arrayType,
@@ -33,6 +37,7 @@ import {
   union,
   unionField,
 } from "./decorators";
+import { fromJson, toJson } from "./json";
 
 export type { Bitfield, BitfieldFlagDefinition } from "./advanced";
 
@@ -65,14 +70,17 @@ export const c = {
   read,
   write,
   sizeof,
-  json,
+  toJson,
+  fromJson,
 
   AdvancedType,
   CBitfield,
   CBool,
   CString,
   CWString,
+  CI64,
   CTime64,
+  CU64,
 
   field,
   struct,
@@ -83,7 +91,9 @@ export const c = {
   Bool: boolField,
   String: stringField,
   WString: wstringField,
+  I64: i64Field,
   Time64: time64Field,
+  U64: u64Field,
   pad,
   enum: enumType,
   bitfield: bitfieldType,
@@ -120,4 +130,10 @@ export namespace c {
     import("./union").UnionOf<T>;
   export type StructMeta = import("./struct").StructMeta;
   export type StructFieldMeta = import("./struct").StructFieldMeta;
+  export type InferJsonType<T extends object = object> =
+    import("./json").InferJsonType<T>;
+  export type AdvancedType<
+    TValue = unknown,
+    TJson extends import("./json").JsonValue = import("./json").JsonValue,
+  > = import("./advanced").AdvancedType<TValue, TJson>;
 }

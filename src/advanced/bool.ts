@@ -3,7 +3,7 @@ import type { Endian } from "../primitive";
 import { AdvancedType, need_bytes } from "./advanced-type";
 
 /** Single-byte boolean (0 = false, non-zero = true on read; writes 0 or 1). */
-export class CBool extends AdvancedType<boolean> {
+export class CBool extends AdvancedType<boolean, boolean> {
   readonly byteSize = 1;
 
   read(
@@ -28,6 +28,17 @@ export class CBool extends AdvancedType<boolean> {
     }
     need_bytes(bytes, offset, this.byteSize, "bool");
     bytes[offset] = value ? 1 : 0;
+  }
+
+  toJson(value: boolean): boolean {
+    return value;
+  }
+
+  fromJson(value: unknown, label: string): boolean {
+    if (typeof value !== "boolean") {
+      throw new CStructError(`${label}: expected boolean`);
+    }
+    return value;
   }
 }
 

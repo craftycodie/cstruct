@@ -76,6 +76,7 @@ export default defineConfig({
           { text: "Bool", link: "/guide/advanced-fields/bool" },
           { text: "String", link: "/guide/advanced-fields/string" },
           { text: "WString", link: "/guide/advanced-fields/wstring" },
+          { text: "U64 / I64", link: "/guide/advanced-fields/int64" },
           { text: "Time64", link: "/guide/advanced-fields/time64" },
           { text: "Bitfield", link: "/guide/advanced-fields/bitfield" },
         ],
@@ -91,6 +92,7 @@ export default defineConfig({
         text: "Reference",
         items: [
           { text: "Struct I/O API", link: "/guide/api" },
+          { text: "JSON encoding", link: "/guide/json" },
           { text: "Changelog", link: "/changelog" },
         ],
       },

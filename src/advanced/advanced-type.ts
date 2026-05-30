@@ -1,4 +1,5 @@
 import { CStructError } from "../errors";
+import type { JsonValue } from "../json";
 import type { Endian } from "../primitive";
 
 export function need_bytes(
@@ -15,9 +16,7 @@ export function need_bytes(
 }
 
 /**
- * Packed field with custom read/write (see {@link "advanced/time64"!CTime64}, {@link "advanced/wstring"!CWString}, and {@link "advanced/string"!CString}).
- *
- * Intended for types that map to a single `@c.field` slot. Multi-field layouts should use `@c.struct` instead.
+ * Packed field with custom read/write and JSON round-trip via {@link toJson} / {@link fromJson}.
  *
  * @example
  * ```ts
@@ -32,7 +31,7 @@ export function need_bytes(
  * }
  * ```
  */
-export abstract class AdvancedType<TValue> {
+export abstract class AdvancedType<TValue, TJson extends JsonValue> {
   abstract readonly byteSize: number;
 
   abstract read(
@@ -49,4 +48,8 @@ export abstract class AdvancedType<TValue> {
     endian: Endian,
     label: string
   ): void;
+
+  abstract toJson(value: TValue, label: string): TJson;
+
+  abstract fromJson(value: unknown, label: string): TValue;
 }

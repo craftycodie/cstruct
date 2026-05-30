@@ -21,7 +21,7 @@ export function date_to_time64_seconds(date: Date): bigint {
 }
 
 /** `u64` Unix timestamp field typed as {@link Date} in TypeScript. */
-export class CTime64 extends AdvancedType<Date> {
+export class CTime64 extends AdvancedType<Date, string> {
   readonly byteSize = 8;
 
   read(
@@ -49,6 +49,21 @@ export class CTime64 extends AdvancedType<Date> {
     need_bytes(bytes, offset, this.byteSize, "time64");
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     write_primitive(view, offset, "u64", date_to_time64_seconds(value), endian);
+  }
+
+  toJson(value: Date): string {
+    return value.toISOString();
+  }
+
+  fromJson(value: unknown, label: string): Date {
+    if (typeof value !== "string") {
+      throw new CStructError(`${label}: expected ISO date string`);
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new CStructError(`${label}: invalid date string`);
+    }
+    return date;
   }
 }
 

@@ -2,6 +2,8 @@
 
 Advanced fields occupy one packed slot in a struct. Pass a factory (`c.Bool`, `c.String`, `c.Time64`, …) or an instance to `@c.field`. Multi-field layouts should use `@c.struct` instead.
 
+All built-in advanced fields support [JSON encoding](../json) via `c.toJson` / `c.fromJson`.
+
 ## Built-in types
 
 | Type | Guide |
@@ -10,10 +12,11 @@ Advanced fields occupy one packed slot in a struct. Pass a factory (`c.Bool`, `c
 | `c.Bool()` | [Boolean](./bool.md) |
 | `c.String(n)` | [Latin-1 string](./string.md) |
 | `c.WString(n)` | [Wide string](./wstring.md) |
+| `c.U64()` / `c.I64()` | [64-bit integers](./int64.md) |
 | `c.Time64()` | [Unix time](./time64.md) |
 | `c.bitfield(storage, flags)` | [Bitfield](./bitfield.md) |
 
-Factories: `c.Bool`, `c.String`, `c.WString`, `c.Time64`, and `c.bitfield`. Classes: `c.CBool`, `c.CString`, `c.CWString`, `c.CTime64`, and `c.CBitfield` (same wire format; use for `instanceof` checks).
+Factories: `c.Bool`, `c.String`, `c.WString`, `c.U64`, `c.I64`, `c.Time64`, and `c.bitfield`. Classes: `c.CBool`, `c.CString`, `c.CWString`, `c.CU64`, `c.CI64`, `c.CTime64`, and `c.CBitfield` (same wire format; use for `instanceof` checks).
 
 ## Full struct example
 

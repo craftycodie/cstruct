@@ -24,6 +24,11 @@ export type Bitfield<T extends BitfieldFlagDefinition> =
       ? { [K in keyof T & string]: boolean }
       : never;
 
+/** JSON shape for {@link Bitfield} (plain object of booleans). */
+export type BitfieldJson<T extends BitfieldFlagDefinition> = {
+  [K in keyof Bitfield<T> & string]: boolean;
+};
+
 export interface BitfieldFlag {
   readonly bit: number;
   readonly name: string;
@@ -97,7 +102,7 @@ function is_bitfield_value(value: unknown): value is Record<string, boolean> {
  */
 export class CBitfield<
   TDef extends BitfieldFlagDefinition = BitfieldFlagDefinition,
-> extends AdvancedType<Bitfield<TDef>> {
+> extends AdvancedType<Bitfield<TDef>, BitfieldJson<TDef>> {
   readonly byteSize: number;
   readonly flags: readonly BitfieldFlag[];
   readonly mask: bigint;
@@ -162,6 +167,21 @@ export class CBitfield<
   ): void {
     const raw = bitfield_to_raw(value, this, label);
     write_primitive(data_view(bytes), offset, this.storage, raw, endian);
+  }
+
+  toJson(value: Bitfield<TDef>, label: string): BitfieldJson<TDef> {
+    const scratch = new Uint8Array(this.byteSize);
+    this.write(scratch, 0, value, "little", label);
+    return this.read(scratch, 0, "little", label) as BitfieldJson<TDef>;
+  }
+
+  fromJson(value: unknown, label: string): Bitfield<TDef> {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new CStructError(`${label}: expected bitfield object`);
+    }
+    const scratch = new Uint8Array(this.byteSize);
+    this.write(scratch, 0, value as Bitfield<TDef>, "little", label);
+    return this.read(scratch, 0, "little", label);
   }
 }
 

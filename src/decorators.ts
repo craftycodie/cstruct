@@ -5,6 +5,11 @@ import { compute_struct_size } from "./codec";
 import type { EnumField } from "./enum";
 import { create_enum_field } from "./enum";
 import { CStructError } from "./errors";
+import type {
+  FieldDecorator,
+  FieldOptionsShape,
+  StructFieldDecorator,
+} from "./field-value";
 import { is_pad_field, type PadField } from "./pad";
 import type { PrimitiveType } from "./primitive";
 import {
@@ -16,11 +21,16 @@ import {
   type StructLayoutCtor,
   type StructMeta,
 } from "./struct";
-import type { UnionArmInput, UnionField, UnionOptions } from "./union";
+import type {
+  ArmsCtorsTuple,
+  StructClass,
+  UnionField,
+  UnionOptions,
+} from "./union";
 import { create_union } from "./union";
 
 /** Optional padding around a field in the parent struct layout. */
-export interface FieldOptions {
+export interface FieldOptions extends FieldOptionsShape {
   /** Repeat the field `count` times as a fixed-length array. */
   count?: number;
   pad_after?: number;
@@ -121,14 +131,22 @@ function resolve_field_type(
  * }
  * ```
  */
-export function field(
-  structCtor?: StructLayoutCtor,
+export function field<F extends object>(
+  structCtor: StructLayoutCtor<F>,
+  options: FieldOptions & { count: number }
+): StructFieldDecorator<F, FieldOptions & { count: number }>;
+export function field<F extends object>(
+  structCtor: StructLayoutCtor<F>,
   options?: FieldOptions
-): (value: undefined, context: ClassFieldDecoratorContext) => void;
-export function field(
-  type: FieldType,
+): StructFieldDecorator<F, FieldOptions | undefined>;
+export function field<F extends FieldType>(
+  type: F,
+  options: FieldOptions & { count: number }
+): FieldDecorator<F, FieldOptions & { count: number }>;
+export function field<F extends FieldType>(
+  type: F,
   options?: FieldOptions
-): (value: undefined, context: ClassFieldDecoratorContext) => void;
+): FieldDecorator<F, FieldOptions | undefined>;
 export function field(
   typeOrOptions?: FieldType | FieldOptions | StructLayoutCtor,
   maybeOptions?: FieldOptions
@@ -138,7 +156,10 @@ export function field(
       ? typeOrOptions
       : undefined;
 
-  return (_value: undefined, context: ClassFieldDecoratorContext): void => {
+  return (
+    _value: undefined,
+    context: ClassFieldDecoratorContext<object, unknown>
+  ): void => {
     const name = String(context.name);
     const { type, options } = resolve_field_type(
       typeOrOptions,
@@ -202,10 +223,10 @@ export function field(
  * }
  * ```
  */
-export function unionField<T extends object>(
-  options: UnionOptions,
-  ...arms: readonly UnionArmInput<T>[]
-): UnionField<T> {
+export function unionField<
+  T extends object,
+  const A extends readonly (readonly [StructClass, ...unknown[]])[],
+>(options: UnionOptions, ...arms: A): UnionField<T, ArmsCtorsTuple<A>> {
   return create_union("", options, arms);
 }
 
@@ -281,12 +302,18 @@ export function struct<T extends abstract new (...args: any) => object>() {
  * }
  * ```
  */
-export function union<T extends object>(
-  options: UnionOptions,
-  ...arms: readonly UnionArmInput<T>[]
-) {
+export function union<
+  T extends object,
+  const A extends readonly (readonly [StructClass, ...unknown[]])[],
+>(options: UnionOptions, ...arms: A) {
   const union_type = create_union("", options, arms);
-  return (_value: undefined, context: ClassFieldDecoratorContext): void => {
+  return (
+    _value: undefined,
+    context: ClassFieldDecoratorContext<
+      T,
+      import("./union").UnionOf<ArmsCtorsTuple<A>>
+    >
+  ): void => {
     const name = String(context.name);
     field_list(context).push({
       name,

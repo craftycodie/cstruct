@@ -29,7 +29,7 @@ function encode_latin1(value: string, max_bytes: number): Uint8Array {
  * Fixed-size Latin-1 string (NUL-terminated within the slot).
  * Not UTF-8 — one byte per character (e.g. U+00A6 → 0xA6, not C2 A6).
  */
-export class CString extends AdvancedType<string> {
+export class CString extends AdvancedType<string, string> {
   readonly byteSize: number;
   readonly size: number;
 
@@ -65,6 +65,17 @@ export class CString extends AdvancedType<string> {
     bytes.fill(0, offset, offset + this.byteSize);
     const encoded = encode_latin1(value, this.byteSize);
     bytes.set(encoded, offset);
+  }
+
+  toJson(value: string): string {
+    return value;
+  }
+
+  fromJson(value: unknown, label: string): string {
+    if (typeof value !== "string") {
+      throw new CStructError(`${label}: expected string`);
+    }
+    return value;
   }
 }
 
