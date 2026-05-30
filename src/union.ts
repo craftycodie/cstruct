@@ -20,8 +20,11 @@ export type UnionArmInput<T extends object = object> = readonly [
  *
  * @example See {@link arm}, {@link when}, and {@link create_union}.
  */
-export interface UnionField<T extends object = object> {
-  readonly arms: readonly StructClass[];
+export interface UnionField<
+  T extends object = object,
+  TArms extends readonly StructClass[] = readonly StructClass[],
+> {
+  readonly arms: TArms;
   /** Reserved bytes when no arm matches. */
   readonly inactive: PadField;
   readonly kind: "union";
@@ -80,10 +83,14 @@ function union_size(
   return size;
 }
 
-function is_union_arm_tuple<T extends object>(
-  value: UnionArmInput<T>
-): value is readonly [StructClass, UnionArmWhen<T>] {
-  return Array.isArray(value);
+function is_union_arm_tuple(
+  value: unknown
+): value is readonly [StructClass, UnionArmWhen<object>] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "function"
+  );
 }
 
 /**
@@ -161,9 +168,12 @@ export function build_union_select<T extends object>(
   };
 }
 
-export function parse_union_definition<T extends object>(
+export function parse_union_definition<
+  T extends object,
+  const A extends readonly (readonly [StructClass, ...unknown[]])[],
+>(
   options: UnionOptions,
-  arms: readonly UnionArmInput<T>[]
+  arms: A
 ): {
   arms: StructClass[];
   select: UnionSelect<T>;
@@ -173,7 +183,10 @@ export function parse_union_definition<T extends object>(
 
   for (const input of arms) {
     if (is_union_arm_tuple(input)) {
-      entries.push({ struct: input[0], when: input[1] });
+      entries.push({
+        struct: input[0],
+        when: input[1] as UnionArmWhen<T>,
+      });
       continue;
     }
 
@@ -214,11 +227,23 @@ export function parse_union_definition<T extends object>(
  * data: ArmA | null = null;
  * ```
  */
-export function create_union<T extends object>(
+export type ArmsCtorsTuple<
+  A extends readonly (readonly [StructClass, ...unknown[]])[],
+> = A extends readonly [
+  readonly [infer C extends StructClass, ...unknown[]],
+  ...infer Tail extends readonly (readonly [StructClass, ...unknown[]])[],
+]
+  ? readonly [C, ...ArmsCtorsTuple<Tail>]
+  : readonly [];
+
+export function create_union<
+  T extends object,
+  const A extends readonly (readonly [StructClass, ...unknown[]])[],
+>(
   name: string,
   options: UnionOptions,
-  arms: readonly UnionArmInput<T>[]
-): UnionField<T> {
+  arms: A
+): UnionField<T, ArmsCtorsTuple<A>> {
   const {
     arms: structs,
     select,
@@ -228,7 +253,7 @@ export function create_union<T extends object>(
   return {
     kind: "union",
     name,
-    arms: structs,
+    arms: structs as unknown as ArmsCtorsTuple<A>,
     select: select as UnionSelect<object>,
     inactive,
     size: union_size(structs, inactive.count),

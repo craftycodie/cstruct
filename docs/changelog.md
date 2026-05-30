@@ -2,6 +2,10 @@
 
 All notable changes to [@craftycodie/cstruct](https://www.npmjs.com/package/@craftycodie/cstruct) are documented here.
 
+## [1.1.1] — 2026-05-31
+
+This update fixes an issue where `c.field` decorated fields were not type-checked correctly.
+
 ## [1.1.0] — 2026-05-26
 
 This update addresses inconsistencies in the API Bitfield API.

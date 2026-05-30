@@ -120,4 +120,10 @@ export namespace c {
     import("./union").UnionOf<T>;
   export type StructMeta = import("./struct").StructMeta;
   export type StructFieldMeta = import("./struct").StructFieldMeta;
+  export type FieldValue<F extends FieldType = FieldType> =
+    import("./field-value").FieldValue<F>;
+  export type FieldDecoratorValue<
+    F extends FieldType = FieldType,
+    O extends import("./field-value").FieldOptionsShape | undefined = undefined,
+  > = import("./field-value").FieldDecoratorValue<F, O>;
 }
