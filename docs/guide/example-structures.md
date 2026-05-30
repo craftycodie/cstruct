@@ -256,7 +256,7 @@ class BlfChunkContentHeader {
   build_number!: number;
 
   @c.field("u16")
-  map_minor_version!: number;
+  build_sequence_number!: number;
 
   @c.field(ContentItemMetadata)
   metadata!: ContentItemMetadata;

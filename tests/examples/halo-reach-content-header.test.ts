@@ -151,7 +151,7 @@ class BlfChunkContentHeader {
   build_number!: number;
 
   @c.field("u16")
-  map_minor_version!: number;
+  build_sequence_number!: number;
 
   @c.field(ContentItemMetadata)
   metadata!: ContentItemMetadata;
@@ -170,7 +170,7 @@ describe("chdr.bin fixture", () => {
     expect(chunk.major).toBe(10);
     expect(chunk.minor).toBe(2);
     expect(chunk.build_number).toBe(11883);
-    expect(chunk.map_minor_version).toBe(0);
+    expect(chunk.build_sequence_number).toBe(0);
 
     const { general } = chunk.metadata;
     expect(general.file_type).toBe(6);
