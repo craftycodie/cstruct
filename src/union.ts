@@ -87,9 +87,7 @@ function is_union_arm_tuple(
   value: unknown
 ): value is readonly [StructClass, UnionArmWhen<object>] {
   return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "function"
+    Array.isArray(value) && value.length === 2 && typeof value[0] === "function"
   );
 }
 
