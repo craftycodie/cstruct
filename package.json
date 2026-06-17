@@ -1,6 +1,6 @@
 {
   "name": "@craftycodie/cstruct",
-  "version": "2.0.0",
+  "version": "2.0.0-alpha.2",
   "description": "Schema-first binary struct layouts for TypeScript (packed read/write with c.struct and @c.class)",
   "type": "module",
   "main": "./dist-cjs/index.js",
