@@ -1,41 +1,59 @@
 # Quick start
 
-Everything public lives on the `c` namespace: decorators, field helpers, and struct I/O.
+Everything public lives on the `c` object: schema factories, optional decorators, and struct I/O.
+
+## Schema-first
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class Example {
-  @c.field("u32")
-  value!: number;
-}
+const Example = c.struct({
+  value: c.u32(),
+});
 
-const bytes = c.write(Example, { value: 42 } as Example, "big");
-const instance = c.read(Example, bytes, "big");
+const bytes = c.write(Example, { value: 42 }, "big");
+const data = c.read(Example, bytes, "big");
 
-console.log(instance.value); // 42
+console.log(data.value); // 42
 console.log(c.sizeof(Example)); // 4
 ```
 
-**C equivalent** — a plain struct with no padding between members when that is all you declare:
-
-```c
-typedef struct {
-    uint32_t value; /* c.field("u32") — 4 bytes; endian from c.read / c.write */
-} Example;
-```
-
-- `c.read(ctor, bytes, endian?)` — parse into a new instance (`endian`: `"little"` default or `"big"`). Slice the buffer first if the struct does not start at index 0.
-- `c.write(ctor, instance, endian?)` — serialize to a new `Uint8Array`.
-- `c.sizeof(ctor)` — total packed size in bytes (`c.sizeof("u32")` → `4` for primitives).
-- `c.json(ctor, instance)` — struct fields as a JSON-friendly object.
-
-Read from an offset inside a larger buffer (file header + payload, chunk tables, etc.):
+## Class decorators
 
 ```ts
-const file = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 42]);
-const atEnd = c.read(Example, file.subarray(4), "big");
+import { c } from "@craftycodie/cstruct";
+
+@c.class()
+class Example {
+  @c.field(c.u32())
+  value!: number;
+}
+
+const instance = new Example();
+instance.value = 42;
+
+const bytes = c.write(instance);
+c.read(instance, bytes);
+console.log(c.sizeof(instance)); // 4
+```
+
+Mix schemas and decorated classes with `c.class(Ctor)` — see [Class decorators](/guide/class-decorators).
+
+Derive TypeScript types from layouts with `c.infer<typeof Schema>` — see [Type helpers](/guide/type-helpers).
+
+## I/O
+
+- `c.read(schema, buffer, endian?)` or `c.read(schema, buffer, offset, endian?)`
+- `c.read(instance, buffer, endian?)` — mutates the instance in place
+- `c.write(schema, data, endian?)` or `c.write(instance, endian?)`
+- `c.sizeof(schema | instance | class)`
+
+Read from an offset inside a larger buffer:
+
+```ts
+const file = Buffer.alloc(8);
+file.writeUInt32BE(42, 4);
+const atEnd = c.read(Example, file, 4, "big");
 ```
 
 Next: [Primitives & padding](/guide/primitives).

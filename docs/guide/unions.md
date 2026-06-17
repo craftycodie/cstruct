@@ -1,67 +1,46 @@
 # Unions
 
-Discriminated unions pick an arm at read/write time from other fields on the parent struct.
+## Overlapping union (`c.Union`)
+
+C-style unions share one memory slot. All members decode from the same offset:
 
 ```ts
-@c.struct()
-class ArmA {
-  @c.field("u8")
-  value!: number;
+const AsU32 = c.struct({ value: c.u32() });
+const AsU16Pair = c.struct({ a: c.u16(), b: c.u16() });
 
-  @c.field(c.pad(3))
-  private _pad!: never;
-}
+const overlap = c.Union({ asU32: AsU32, asU16Pair: AsU16Pair });
 
-@c.struct()
-class Host {
-  @c.field("u8")
-  kind!: number;
-
-  @c.union({ size: 4 }, c.arm(ArmA, (m: Host) => m.kind === 1))
-  data: ArmA | null = null;
-}
+const decoded = overlap.read(buffer, 0, "little");
+// { asU32: { value: ... }, asU16Pair: { a: ..., b: ... } }
 ```
 
-Annotate the host type in arm predicates so TypeScript knows which fields exist (`m: Host`).
-
-**C equivalent** — a tag field plus a fixed-size `union` over the arm layouts. The union slot is always 4 bytes; only one arm is meaningful at a time:
-
-```c
-typedef struct {
-    uint8_t value;
-    uint8_t _pad[3]; /* c.pad(3) */
-} ArmA;
-
-typedef struct {
-    uint8_t kind; /* discriminant — read this first */
-    union {
-        ArmA a;           /* active when kind == 1 */
-        uint8_t raw[4];   /* same 4 bytes when no arm matches */
-    } data;
-} Host;
-```
-
-`c.union({ size: 4 }, …)` reserves those four bytes in the parent struct. When no arm predicate matches, cstruct leaves the bytes as padding and sets the property to `null` — in C you would ignore `data` or treat it as uninitialized for that tag value.
-
-A layout with multiple arms and a larger slot (see [Example structures](./example-structures.md#content-metadata-nested-struct--unions--wide-strings)) matches the same idea: one discriminant elsewhere on the struct, then a `union { … }` sized to the largest arm (16 bytes in that example).
-
-## Shorthand: `c.when`
-
-Constant discriminant:
+Write the first member you provide:
 
 ```ts
-@c.union({ size: 4 }, c.when(1, ArmA, (m) => m.kind))
+overlap.write(buffer, 0, { asU32: { value: 42 } }, "little");
 ```
 
-## `c.unionField`
+## Discriminated union (`c.discriminatedUnion`)
 
-Same layout inside `@c.field` when the union is not a standalone property:
+A fixed-size slot holds one active arm, chosen from parent fields:
 
 ```ts
-@c.field(
-  c.unionField({ size: 4 }, c.arm(ArmA, (m: Host) => m.kind === 1))
-)
-data: ArmA | null = null;
+const FilmArm = c.struct({ seconds: c.i32(), _pad: c.pad(12) });
+const VariantArm = c.struct({ icon_index: c.u8(), _pad: c.pad(15) });
+
+const Host = c.struct({
+  file_type: c.u8(),
+  data: c.discriminatedUnion(
+    { size: 16 },
+    c.arm(FilmArm, (m) => m.file_type === 3),
+    c.when(6, VariantArm, (m) => m.file_type),
+  ),
+});
 ```
 
-When no arm matches, the union slot is treated as padding and the property is `null`.
+- `c.arm(schema, when)` — predicate on the parent record
+- `c.when(value, schema, discriminant)` — shorthand when discriminant equals `value`
+- Inactive arms serialize as `null`; slots are zero-filled on write
+- Use `c.UnionOf<typeof arms>` or `c.infer<typeof Host>["data"]` for the decoded arm type — see [Type helpers](./type-helpers.md)
+
+On decorated classes, use `@c.field(c.discriminatedUnion(...))` the same way as any other field type.

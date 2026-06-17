@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
     "useDefineForClassFields": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,

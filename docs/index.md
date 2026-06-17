@@ -10,7 +10,7 @@ outline: false
 </h1>
 
 <p class="cstruct-lead">
-  Packed binary layouts for TypeScript — describe structs with Stage 3 decorators, then read and write <code>Uint8Array</code> data with explicit endianness. Inspired by <a href="https://github.com/jam1garner/binrw">binrw</a>.
+  Packed binary layouts for TypeScript — describe structs with <code>c.struct</code> schemas or <code>@c.class()</code> decorators, then read and write <code>Buffer</code> data with explicit endianness. Inspired by <a href="https://github.com/jam1garner/binrw">binrw</a>.
 </p>
 
 <p class="cstruct-meta">
@@ -27,38 +27,31 @@ outline: false
 
 | Step | Description |
 | --- | --- |
-| **Define** | `@c.struct()` classes with `@c.field(...)` on each member |
-| **Serialize** | `c.write(ctor, instance, endian?)` → `Uint8Array` |
-| **Parse** | `c.read(ctor, bytes, endian?)` → instance |
-| **Measure** | `c.sizeof(ctor)` — packed size in bytes |
+| **Define** | `c.struct({ ... })` or `@c.class()` with `@c.field(c.u32())` |
+| **Serialize** | `c.write(schema, data)` or `c.write(instance)` → `Buffer` |
+| **Parse** | `c.read(schema, buffer)` or `c.read(instance, buffer)` |
+| **Measure** | `c.sizeof(schema \| instance \| class)` |
 
-Endianness is `"little"` (default) or `"big"`. Slice buffers when a struct does not start at offset zero.
+Endianness is `"little"` (default) or `"big"`. Pass a byte offset when a struct does not start at zero.
 
 ## Example
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class Dog {
-  @c.field("u8")
-  bone_pile_count!: number;
+const Dog = c.struct({
+  bone_pile_count: c.u8(),
+  favorite_bone: c.u16({ padBefore: 1 }),
+  name: c.String(16),
+});
 
-  @c.field("u16", { pad_before: 1 })
-  favorite_bone!: number;
+const bytes = c.write(Dog, {
+  bone_pile_count: 2,
+  favorite_bone: 0x12,
+  name: "Rudy",
+});
 
-  @c.field(c.String(16))
-  name!: string;
-}
-
-const dog = new Dog();
-dog.bone_pile_count = 2;
-dog.favorite_bone = 0x12;
-dog.name = "Rudy";
-
-const bytes = c.write(Dog, dog, "little");
-const parsed = c.read(Dog, bytes, "little");
-
+const parsed = c.read(Dog, bytes);
 console.log(parsed.favorite_bone); // 18
 console.log(parsed.name); // "Rudy"
 console.log(c.sizeof(Dog)); // 19
@@ -68,33 +61,16 @@ console.log(c.sizeof(Dog)); // 19
 
 ## What you can model
 
-**Scalars & layout** — Fixed-width integers and floats, `bigint` u64/i64, explicit padding, and nested structs. Field order and size come from the class definition, not hand-maintained offsets.
+**Scalars & layout** — Fixed-width integers and floats, `bigint` u64/i64, explicit padding, and nested structs.
 
-**Discriminated data** — Validated enums, discriminated unions (`@c.union`, `c.arm`, `c.when`), and fixed-length arrays.
+**Unions** — Overlapping `c.Union` and discriminated `c.discriminatedUnion` with `c.arm` / `c.when`.
 
-**Advanced fields** — Built-in `c.Bool`, `c.String`, `c.WString`, `c.Time64`, and `c.bitfield` for flag words, or subclass `c.AdvancedType` for your own wire format in a single field slot.
+**Field types** — `c.String`, `c.WString`, `c.Time64`, `c.Enum`, `c.Bitfield`, `c.MagicNumber`, `c.MagicString`, and fixed arrays.
+
+**Type helpers** — `c.infer<T>` and `c.UnionOf<Arms>` for decoded shapes.
 
 ## Get started
 
 ```bash
 npm install @craftycodie/cstruct
 ```
-
-Import `{ c }` from `@craftycodie/cstruct` **before** any `@c.struct()` class so the `Symbol.metadata` polyfill is installed. Stage 3 decorators are required (`experimentalDecorators: false`, `decoratorVersion: "2022-03"` with SWC or Vitest). See [Install & setup](/guide/install) for compiler and test runner configuration.
-
-## Guide map
-
-| Topic | Page |
-| --- | --- |
-| First read/write | [Quick start](/guide/quick-start) |
-| Types, padding, alignment | [Primitives & padding](/guide/primitives) |
-| Structs inside structs | [Nested structs](/guide/nested-structs) |
-| Variant layouts | [Unions](/guide/unions) |
-| Stored enum values | [Enums](/guide/enums) |
-| Repeated fields | [Arrays](/guide/arrays) |
-| Flag words | [Bitfield](/guide/advanced-fields/bitfield) |
-| Strings, time, custom types | [Advanced fields](/guide/advanced-fields/) |
-| Real-world layouts | [Example structures](/guide/example-structures) |
-| Testing with decorators | [Vitest & SWC](/guide/vitest) |
-| `read` / `write` / `sizeof` | [Struct I/O API](/guide/api) |
-| Release history | [Changelog](/changelog) |

@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
     "useDefineForClassFields": true,
     "declaration": true,
     "declarationMap": true,

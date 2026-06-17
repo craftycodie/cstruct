@@ -2,6 +2,36 @@
 
 All notable changes to [@craftycodie/cstruct](https://www.npmjs.com/package/@craftycodie/cstruct) are documented here.
 
+## [2.0.0] — 2026-06-17
+
+Major rewrite: schema-first API with optional class decorators.
+
+### Added
+
+- `c.struct({ field: c.u32() })` schema factory
+- Primitive factories: `c.u8()` … `c.f64()`, `c.u64()`, `c.i64()`
+- `@c.class()` / `@c.field()` decorators (replaces `@c.struct()`)
+- Overlapping `c.Union({ ... })` for C-style unions
+- `c.discriminatedUnion`, `c.MagicNumber`, `c.MagicString`
+- `c.infer<T>` type helper and `c.UnionOf<Arms>`
+- `c.read(instance, buffer)` / `c.write(instance)` for decorated classes
+
+### Changed
+
+- I/O uses Node `Buffer` instead of `Uint8Array`
+- Enums return string keys (`c.Enum(map, type)`)
+- Bitfields use sequential keys: `c.Bitfield(keys, type)`
+- Padding options are camelCase: `padBefore`, `padAfter`
+- `c.read(schema, buffer, endian?)` accepts endian as the third argument
+
+### Removed
+
+- `@c.struct()` decorator (use `@c.class()`)
+- String primitive syntax (`@c.field("u32")`)
+- `c.json()`, `c.sizeof("u32")`, `c.unionField`, `CStructError`
+- Stage 3 decorators / `Symbol.metadata` polyfill requirement
+- `c.AdvancedType` extension base (use `CFieldType` subclasses internally)
+
 ## [1.1.1] — 2026-05-31
 
 This update fixes an issue where `c.field` decorated fields were not type-checked correctly.

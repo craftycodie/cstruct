@@ -6,23 +6,42 @@ Declarative packed binary readers and writers for TypeScript, inspired by [binrw
 
 ## Features
 
-- Struct layouts with Stage 3 decorators (`@c.struct`, `@c.field`)
-- `c.read`, `c.write`, and `c.sizeof` over `Uint8Array` with little or big endian
-- Padding, nested structs, discriminated unions, and validated enums
-- Built-in `c.String`, `c.WString`, and `c.Time64`; extend with `c.AdvancedType`
+- Schema-first layouts with `c.struct({ field: c.u32() })`
+- Optional `@c.class()` / `@c.field()` decorators for class-based definitions
+- `c.read`, `c.write`, and `c.sizeof` over Node `Buffer` with little or big endian
+- Padding, nested structs, overlapping unions, discriminated unions, enums, bitfields
+- Built-in `c.String`, `c.WString`, `c.Time64`, `c.MagicNumber`, `c.MagicString`, and more
+- `c.infer<T>` and `c.UnionOf<Arms>` type helpers
 
 ## Usage
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class Dog {
-  @c.field("u8")
-  bone_pile_count!: number;
+const Dog = c.struct({
+  bone_pile_count: c.u8(),
+  favorite_bone: c.u16({ padBefore: 1 }),
+  name: c.String(16),
+});
 
-  @c.field("u16", { pad_before: 1 })
-  favorite_bone!: number;
+const bytes = c.write(Dog, {
+  bone_pile_count: 2,
+  favorite_bone: 0x12,
+  name: "Rudy",
+});
+
+const parsed = c.read(Dog, bytes);
+console.log(parsed.favorite_bone); // 18
+console.log(parsed.name); // "Rudy"
+```
+
+Class decorators work too:
+
+```ts
+@c.class()
+class Dog {
+  @c.field(c.u8())
+  bone_pile_count!: number;
 
   @c.field(c.String(16))
   name!: string;
@@ -30,14 +49,10 @@ class Dog {
 
 const dog = new Dog();
 dog.bone_pile_count = 2;
-dog.favorite_bone = 0x12;
 dog.name = "Rudy";
 
-const bytes = c.write(Dog, dog, "little");
-const parsed = c.read(Dog, bytes, "little");
-
-console.log(parsed.favorite_bone); // 18
-console.log(parsed.name); // "Rudy"
+const bytes = c.write(dog);
+c.read(dog, bytes);
 ```
 
 For guides, API reference, changelog, and more examples, see the [documentation](https://craftycodie.github.io/cstruct/).
@@ -48,7 +63,7 @@ For guides, API reference, changelog, and more examples, see the [documentation]
 npm install @craftycodie/cstruct
 ```
 
-Requires [Stage 3 decorators](https://github.com/tc39/proposal-decorators) (`experimentalDecorators: false`, `decoratorVersion: "2022-03"` with SWC/Vitest). Import `@craftycodie/cstruct` before defining struct classes.
+Requires TypeScript `experimentalDecorators: true` if you use `@c.class()` / `@c.field()`.
 
 ## License
 

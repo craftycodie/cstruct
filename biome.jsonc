@@ -13,51 +13,24 @@
   },
   "overrides": [
     {
-      "includes": ["src/index.ts"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noBarrelFile": "off"
-          },
-          "style": {
-            "noExportedImports": "off",
-            "noNamespace": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/advanced/bitfield.ts"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noBitwiseOperators": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/struct.ts"],
+      "includes": ["src/**"],
       "linter": {
         "rules": {
           "complexity": {
-            "noBannedTypes": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/decorators.ts"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noBarrelFile": "off"
+            "noBannedTypes": "off",
+            "noExcessiveCognitiveComplexity": "off"
           },
           "suspicious": {
-            "noExplicitAny": "off"
+            "noExplicitAny": "off",
+            "noBitwiseOperators": "off",
+            "noShadowRestrictedNames": "off"
           },
           "style": {
+            "noNamespace": "off",
             "useUnifiedTypeSignatures": "off"
+          },
+          "performance": {
+            "noBarrelFile": "off"
           }
         }
       }
@@ -76,22 +49,14 @@
       }
     },
     {
-      "includes": ["src/advanced/index.ts"],
+      "includes": ["tests/**"],
       "linter": {
         "rules": {
-          "performance": {
-            "noBarrelFile": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/codec.ts"],
-      "linter": {
-        "rules": {
-          "complexity": {
-            "noBannedTypes": "off",
-            "noExcessiveCognitiveComplexity": "off"
+          "style": {
+            "useReadonlyClassProperties": "off"
+          },
+          "suspicious": {
+            "noBitwiseOperators": "off"
           }
         }
       }

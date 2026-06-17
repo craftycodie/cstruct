@@ -1,25 +1,23 @@
 # Nested structs
 
-Pass a struct class as the field type, or omit the type and let it infer from the property:
+Embed another schema inline by passing a `c.struct(...)` value as a field:
 
 ```ts
-@c.struct()
-class Point {
-  @c.field("i16")
-  x!: number;
+import { c } from "@craftycodie/cstruct";
 
-  @c.field("i16")
-  y!: number;
-}
+const Point = c.struct({
+  x: c.i16(),
+  y: c.i16(),
+});
 
-@c.struct()
-class Shape {
-  @c.field(Point)
-  origin!: Point;
-}
+const Shape = c.struct({
+  origin: Point,
+});
 ```
 
 Nested structs are read and written inline; `c.sizeof(Shape)` includes the full `Point` layout.
+
+To nest decorated classes, pass the class constructor as a field type — see [Class decorators](./class-decorators.md#mixing-schemas-and-classes).
 
 **C equivalent** — nested members with no extra indirection (same as embedding a sub-struct by value):
 
@@ -30,7 +28,7 @@ typedef struct {
 } Point;
 
 typedef struct {
-    Point origin; /* c.field(Point) — Point laid out inline, not a pointer */
+    Point origin; /* laid out inline, not a pointer */
 } Shape;
 ```
 

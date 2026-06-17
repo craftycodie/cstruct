@@ -1,21 +1,26 @@
 # Enums
 
-Map integer values to a fixed set with `c.enum(storage, map)`:
+Map integer wire values to string keys with `c.Enum(map, storage)` or a sequential string array:
 
 ```ts
+import { c } from "@craftycodie/cstruct";
+
 const Status = {
   Ok: 0,
   Error: 1,
 } as const;
 
-@c.struct()
-class Packet {
-  @c.field(c.enum("u8", Status))
-  status!: number;
-}
+const Packet = c.struct({
+  status: c.Enum(Status, c.u8()),
+});
+
+// Sequential indices 0, 1, 2, …
+const Phase = c.struct({
+  stage: c.Enum(["Lobby", "Playing", "Postgame"], c.u8()),
+});
 ```
 
-Values are validated on read and write. Use `pad_after` on the same field when the layout has trailing padding after a small enum storage type.
+Read and write use the **string key** (`"Ok"`, `"Error"`). Values are validated on read and write. Use `padAfter` on the same field when the layout has trailing padding after a small enum storage type.
 
 **C equivalent** — integer storage with a fixed set of named constants:
 
@@ -26,7 +31,7 @@ typedef enum {
 } Status;
 
 typedef struct {
-    uint8_t status; /* c.enum("u8", Status) */
+    uint8_t status; /* c.Enum(Status, c.u8()) */
 } Packet;
 ```
 
@@ -41,6 +46,6 @@ typedef struct {
 } Packet;
 ```
 
-cstruct’s `c.enum()` is the typed version of that pattern: it checks the value is one of the allowed constants on read and write. The storage type (`u8`, `u16`, …) is the width of the integer field in the struct.
+cstruct's `c.Enum()` is the typed version of that pattern: it checks the value is one of the allowed constants on read and write. The storage factory (`c.u8()`, `c.u16()`, …) is the width of the integer field in the struct.
 
-For combinable flag bits in one integer, see [Bitfield](./advanced-fields/bitfield.md).
+For combinable flag bits in one integer, see [Bitfield](./field-types/bitfield.md).
