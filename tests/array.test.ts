@@ -12,6 +12,10 @@ const WithPrimitiveArray = c.struct({
   values: c.array(c.u32(), 3),
 });
 
+const WithLengthOneArray = c.struct({
+  value: c.array(c.u32(), 1),
+});
+
 const WithFieldCount = c.struct({
   tags: c.array(c.u16(), 2),
 });
@@ -49,6 +53,26 @@ describe("arrays", () => {
     const bytes = c.write(WithPrimitiveArray, sample, "little");
     expect(bytes).toEqual(Buffer.from([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]));
     expect(c.read(WithPrimitiveArray, bytes, "little")).toEqual(sample);
+  });
+
+  it("round-trips length-1 arrays as arrays (not scalars)", () => {
+    const sample = { value: [42] as [number] };
+    const bytes = c.write(WithLengthOneArray, sample, "little");
+    expect(bytes).toEqual(Buffer.from([42, 0, 0, 0]));
+    expect(c.read(WithLengthOneArray, bytes, "little")).toEqual(sample);
+    expect(() =>
+      c.write(WithLengthOneArray, { value: 42 as never }, "little")
+    ).toThrow(/Expected array/);
+  });
+
+  it("round-trips runtime length-1 arrays", () => {
+    const n = 1;
+    const Dynamic = c.struct({
+      ids: c.array(c.u64(), n),
+    });
+    const sample = { ids: [9n] };
+    const bytes = c.write(Dynamic, sample, "big");
+    expect(c.read(Dynamic, bytes, "big")).toEqual(sample);
   });
 
   it("round-trips u16 arrays (big-endian)", () => {

@@ -47,11 +47,9 @@ type FieldValueType<T extends FieldType> =
                 ? AT
                 : never;
 
-type ProcessArrayField<K extends string, T, N extends number> = N extends 1
-  ? { [Key in K]: T }
-  : number extends N
-    ? { [Key in K]: T[] }
-    : { [Key in K]: Tuple<T, N> };
+type ProcessArrayField<K extends string, T, N extends number> = number extends N
+  ? { [Key in K]: T[] }
+  : { [Key in K]: Tuple<T, N> };
 
 type NestedStructSchema<T> = T extends { readonly struct: infer S }
   ? S extends Struct<infer F>
@@ -192,7 +190,8 @@ export class Struct<F extends StructFields = StructFields> {
         const nestedStruct = field.type;
         const count = field.count ?? 1;
 
-        if (count === 1) {
+        // `count` is only set for `c.array(...)` / `{ count }`; omit means a single value.
+        if (field.count === undefined) {
           result[field.name] = nestedStruct.read(
             buffer,
             offset + currentOffset,
@@ -220,7 +219,7 @@ export class Struct<F extends StructFields = StructFields> {
           continue;
         }
 
-        if (count === 1) {
+        if (field.count === undefined) {
           result[field.name] = dataField.read(
             buffer,
             offset + currentOffset,
@@ -268,7 +267,7 @@ export class Struct<F extends StructFields = StructFields> {
           const count = field.count ?? 1;
           const value = data[field.name];
 
-          if (count === 1 && !Array.isArray(value)) {
+          if (field.count === undefined) {
             if (value === undefined || value === null) {
               throw new Error(`Field '${field.name}' is ${value}`);
             }
@@ -312,14 +311,24 @@ export class Struct<F extends StructFields = StructFields> {
 
           const value = data[field.name];
 
-          if (Array.isArray(value)) {
+          if (field.count === undefined) {
+            dataField.write(buffer, currentOffset, value, endian);
+            currentOffset += dataField.getSize();
+          } else {
+            if (!Array.isArray(value)) {
+              throw new Error(
+                `Expected array for field '${field.name}' with count ${count}`
+              );
+            }
+            if (value.length < count) {
+              throw new Error(
+                `Field '${field.name}' expected ${count} elements but got ${value.length}`
+              );
+            }
             for (let i = 0; i < count; i++) {
               dataField.write(buffer, currentOffset, value[i], endian);
               currentOffset += dataField.getSize();
             }
-          } else {
-            dataField.write(buffer, currentOffset, value, endian);
-            currentOffset += dataField.getSize();
           }
           continue;
         }
@@ -347,11 +356,9 @@ type InferType<T> =
           readonly element: infer ET;
           readonly count: infer N extends number;
         }
-        ? N extends 1
-          ? InferType<ET>
-          : number extends N
-            ? InferType<ET>[]
-            : Tuple<InferType<ET>, N>
+        ? number extends N
+          ? InferType<ET>[]
+          : Tuple<InferType<ET>, N>
         : T extends {
               readonly __cdiscriminatedUnion: true;
               readonly arms: infer Arms;
