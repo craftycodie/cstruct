@@ -66,7 +66,7 @@ describe("arrays", () => {
   });
 
   it("round-trips runtime length-1 arrays", () => {
-    const n = 1;
+    const n: number = 1;
     const Dynamic = c.struct({
       ids: c.array(c.u64(), n),
     });
