@@ -1,38 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { c } from "../src/index";
 
-/** Simplified Reach-style metadata arms (fixed 16-byte union). */
-@c.struct()
-class FilmArm {
-  @c.field("i32", { pad_after: 12 })
-  seconds!: number;
-}
+const FilmArm = c.struct({
+  seconds: c.i32(),
+  _pad: c.pad(12),
+});
 
-@c.struct()
-class GameVariantArm {
-  @c.field("i8", { pad_after: 15 })
-  icon_index!: number;
-}
+const GameVariantArm = c.struct({
+  icon_index: c.u8(),
+  _pad: c.pad(15),
+});
 
-@c.struct()
-class ContentMetadataHost {
-  @c.field("i8")
-  file_type!: number;
-
-  @c.union(
+const ContentMetadataHost = c.struct({
+  file_type: c.u8(),
+  typed_data: c.discriminatedUnion(
     { size: 16 },
-    c.arm(FilmArm, (m: ContentMetadataHost) => m.file_type === 3),
-    c.arm(GameVariantArm, (m: ContentMetadataHost) => m.file_type === 6)
-  )
-  typed_data: FilmArm | GameVariantArm | null = null;
-}
+    c.arm(FilmArm, (m) => m.file_type === 3),
+    c.arm(GameVariantArm, (m) => m.file_type === 6)
+  ),
+});
 
-describe("unions", () => {
+describe("discriminated unions", () => {
   it("reads the film arm when file_type is 3", () => {
-    const bytes = new Uint8Array(17);
+    const bytes = Buffer.alloc(17);
     bytes[0] = 3;
-    const view = new DataView(bytes.buffer);
-    view.setInt32(1, 120, true);
+    bytes.writeInt32LE(120, 1);
 
     const read = c.read(ContentMetadataHost, bytes, "little");
     expect(read.file_type).toBe(3);
@@ -40,7 +32,7 @@ describe("unions", () => {
   });
 
   it("reads the game-variant arm when file_type is 6", () => {
-    const bytes = new Uint8Array(17);
+    const bytes = Buffer.alloc(17);
     bytes[0] = 6;
     bytes[1] = 7;
 
@@ -53,8 +45,8 @@ describe("unions", () => {
       ContentMetadataHost,
       {
         file_type: 3,
-        typed_data: { seconds: 42 } as FilmArm,
-      } as ContentMetadataHost,
+        typed_data: { seconds: 42 },
+      },
       "little"
     );
     expect(c.read(ContentMetadataHost, film, "little").typed_data).toEqual({
@@ -65,8 +57,8 @@ describe("unions", () => {
       ContentMetadataHost,
       {
         file_type: 6,
-        typed_data: { icon_index: 2 } as GameVariantArm,
-      } as ContentMetadataHost,
+        typed_data: { icon_index: 2 },
+      },
       "little"
     );
     expect(c.read(ContentMetadataHost, variant, "little").typed_data).toEqual({
@@ -75,7 +67,7 @@ describe("unions", () => {
   });
 
   it("leaves the union null when no arm matches", () => {
-    const bytes = new Uint8Array(17);
+    const bytes = Buffer.alloc(17);
     bytes[0] = 0;
     const read = c.read(ContentMetadataHost, bytes, "little");
     expect(read.typed_data).toBeNull();

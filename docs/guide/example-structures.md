@@ -1,13 +1,12 @@
 # Example structures
 
-These layouts are modeled on [blf_lib](https://github.com/craftycodie/blf) Reach TU1 definitions (`saved_game_files.rs`, `s_blf_chunk_content_header`). cstruct handles **packed struct I/O** — fixed layouts, padding, nested structs, unions, and advanced fields (`Time64`, `String`, `WString`). It does **not** handle bitstreams or fields whose size depends on runtime bit reads.
+These layouts are modeled on [blf_lib](https://github.com/craftycodie/blf) Reach TU1 definitions (`saved_game_files.rs`, `s_blf_chunk_content_header`). cstruct handles **packed struct I/O** — fixed layouts, padding, nested structs, unions, and field types (`Time64`, `String`, `WString`). It does **not** handle bitstreams or fields whose size depends on runtime bit reads.
 
-For union and advanced-field APIs, see [Unions](./unions.md) and [Advanced fields](./advanced-fields/).
+For unions and field-type APIs, see [Unions](./unions.md) and [Field types](./field-types/).
 
 Runnable copies of these examples live in:
 
-- `tests/blf-inspired.test.ts` — campaign metadata, history, general metadata, offset reads
-- `tests/chdr.test.ts` — full `ContentItemMetadata`, BLF CHDR chunk (`tests/chdr.bin` fixture)
+- `tests/examples/halo-reach-content-header.test.ts` — full `ContentItemMetadata`, BLF CHDR chunk (`tests/examples/fixtures/chdr.bin` fixture)
 
 ## Campaign metadata (16 bytes)
 
@@ -16,26 +15,14 @@ A small packed struct with mixed integer widths:
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class ContentItemCampaignMetadata {
-  @c.field("i32")
-  campaign_id!: number;
-
-  @c.field("i16")
-  campaign_difficulty!: number;
-
-  @c.field("i16")
-  campaign_metagame_scoring!: number;
-
-  @c.field("i32")
-  campaign_insertion_point!: number;
-
-  @c.field("i16")
-  campaign_primary_skulls!: number;
-
-  @c.field("i16")
-  campaign_secondary_skulls!: number;
-}
+const ContentItemCampaignMetadata = c.struct({
+  campaign_id: c.i32(),
+  campaign_difficulty: c.i16(),
+  campaign_metagame_scoring: c.i16(),
+  campaign_insertion_point: c.i32(),
+  campaign_primary_skulls: c.i16(),
+  campaign_secondary_skulls: c.i16(),
+});
 
 // c.sizeof(ContentItemCampaignMetadata) === 16
 
@@ -46,7 +33,7 @@ const value = {
   campaign_insertion_point: 10,
   campaign_primary_skulls: 3,
   campaign_secondary_skulls: 0,
-} satisfies ContentItemCampaignMetadata;
+};
 
 const bytes = c.write(ContentItemCampaignMetadata, value, "little");
 const read = c.read(ContentItemCampaignMetadata, bytes, "little");
@@ -57,20 +44,12 @@ const read = c.read(ContentItemCampaignMetadata, bytes, "little");
 Uses `c.Time64()` (`u64` seconds → `Date`) and a fixed Latin-1 name buffer. Padding after `is_online` aligns the struct to 36 bytes:
 
 ```ts
-@c.struct()
-class ContentItemHistory {
-  @c.field(c.Time64())
-  timestamp!: Date;
-
-  @c.field("u64")
-  xuid!: bigint;
-
-  @c.field(c.String(16))
-  name!: string;
-
-  @c.field("u8", { pad_after: 3 })
-  is_online!: number;
-}
+const ContentItemHistory = c.struct({
+  timestamp: c.Time64(),
+  xuid: c.u64(),
+  name: c.String(16),
+  is_online: c.u8({ padAfter: 3 }),
+});
 
 const when = new Date("2010-06-14T12:00:00.000Z");
 const history = {
@@ -78,7 +57,7 @@ const history = {
   xuid: 0x0009_0003_1234_5678n,
   name: "Player1",
   is_online: 1,
-} satisfies ContentItemHistory;
+};
 
 const bytes = c.write(ContentItemHistory, history, "little");
 const read = c.read(ContentItemHistory, bytes, "little");
@@ -87,41 +66,21 @@ const read = c.read(ContentItemHistory, bytes, "little");
 
 ## General metadata (48 bytes)
 
-`pad_after` on `file_type` inserts three zero bytes before `size_in_bytes` (mirrors Reach layout):
+`padAfter` on `file_type` inserts three zero bytes before `size_in_bytes` (mirrors Reach layout):
 
 ```ts
-@c.struct()
-class ContentItemGeneralMetadata {
-  @c.field("i8", { pad_after: 3 })
-  file_type!: number;
-
-  @c.field("u32")
-  size_in_bytes!: number;
-
-  @c.field("u64")
-  unique_id!: bigint;
-
-  @c.field("u64")
-  parent_unique_id!: bigint;
-
-  @c.field("u64")
-  root_unique_id!: bigint;
-
-  @c.field("u64")
-  game_id!: bigint;
-
-  @c.field("i8")
-  activity!: number;
-
-  @c.field("u8")
-  game_mode!: number;
-
-  @c.field("u8", { pad_after: 1 })
-  game_engine_type!: number;
-
-  @c.field("i32")
-  map_id!: number;
-}
+const ContentItemGeneralMetadata = c.struct({
+  file_type: c.i8({ padAfter: 3 }),
+  size_in_bytes: c.u32(),
+  unique_id: c.u64(),
+  parent_unique_id: c.u64(),
+  root_unique_id: c.u64(),
+  game_id: c.u64(),
+  activity: c.i8(),
+  game_mode: c.u8(),
+  game_engine_type: c.u8({ padAfter: 1 }),
+  map_id: c.i32(),
+});
 
 const general = {
   file_type: 6,
@@ -134,22 +93,23 @@ const general = {
   game_mode: 3,
   game_engine_type: 2,
   map_id: -1,
-} satisfies ContentItemGeneralMetadata;
+};
 
 const bytes = c.write(ContentItemGeneralMetadata, general, "little");
 ```
 
 ## Reading at an offset
 
-`c.read` only needs a `Uint8Array` view — useful when a struct is embedded in a larger file:
+`c.read` accepts an offset into a larger `Buffer` — useful when a struct is embedded in a file:
 
 ```ts
 const inner = c.write(ContentItemGeneralMetadata, general, "little");
-const file = new Uint8Array([0xff, 0xff, ...inner]);
+const file = Buffer.concat([Buffer.from([0xff, 0xff]), inner]);
 
 const atOffset = c.read(
   ContentItemGeneralMetadata,
-  file.subarray(2, 2 + c.sizeof(ContentItemGeneralMetadata)),
+  file,
+  2,
   "little"
 );
 ```
@@ -159,76 +119,47 @@ const atOffset = c.read(
 Reach `c_content_item_metadata` combines nested structs, two 16-byte union slots, and UTF-16 name/description buffers (`0x80` wchar slots each):
 
 ```ts
-@c.struct()
-class ContentItemFilmMetadata {
-  @c.field("i32", { pad_after: 12 })
-  seconds!: number;
-}
+const ContentItemFilmMetadata = c.struct({
+  seconds: c.i32(),
+  _pad: c.pad(12),
+});
 
-@c.struct()
-class ContentItemGameVariantMetadata {
-  @c.field("i8", { pad_after: 15 })
-  icon_index!: number;
-}
+const ContentItemGameVariantMetadata = c.struct({
+  icon_index: c.u8(),
+  _pad: c.pad(15),
+});
 
-@c.struct()
-class ContentItemMatchmakingMetadata {
-  @c.field("u16", { pad_after: 14 })
-  hopper_identifier!: number;
-}
+const ContentItemMatchmakingMetadata = c.struct({
+  hopper_identifier: c.u16(),
+  _pad: c.pad(14),
+});
 
-@c.struct()
-class ContentItemDisplayMetadata {
-  @c.field("i8", { pad_after: 7 })
-  megalo_category_index!: number;
-}
+const ContentItemDisplayMetadata = c.struct({
+  megalo_category_index: c.i8(),
+  _pad: c.pad(7),
+});
 
-@c.struct()
-class ContentItemMetadata {
-  @c.field(ContentItemGeneralMetadata)
-  general!: ContentItemGeneralMetadata;
-
-  @c.field(ContentItemDisplayMetadata)
-  display!: ContentItemDisplayMetadata;
-
-  @c.field(ContentItemHistory)
-  creation_history!: ContentItemHistory;
-
-  @c.field(ContentItemHistory)
-  modification_history!: ContentItemHistory;
-
-  @c.field(c.WString(0x80))
-  name!: string;
-
-  @c.field(c.WString(0x80))
-  description!: string;
-
-  /** Discriminated by `general.file_type` (film = 3/4, game variant = 6). */
-  @c.union(
+const ContentItemMetadata = c.struct({
+  general: ContentItemGeneralMetadata,
+  display: ContentItemDisplayMetadata,
+  creation_history: ContentItemHistory,
+  modification_history: ContentItemHistory,
+  name: c.WString(0x80),
+  description: c.WString(0x80),
+  file_type_data: c.discriminatedUnion(
     { size: 16 },
-    c.when(3, ContentItemFilmMetadata, (m: ContentItemMetadata) => m.general.file_type),
-    c.when(4, ContentItemFilmMetadata, (m: ContentItemMetadata) => m.general.file_type),
-    c.when(
-      6,
-      ContentItemGameVariantMetadata,
-      (m: ContentItemMetadata) => m.general.file_type
-    )
-  )
-  file_type_data:
-    | ContentItemFilmMetadata
-    | ContentItemGameVariantMetadata
-    | null = null;
-
-  /** Active when `general.activity === 3` (matchmaking). */
-  @c.union(
+    c.when(3, ContentItemFilmMetadata, (m) => m.general.file_type),
+    c.when(4, ContentItemFilmMetadata, (m) => m.general.file_type),
+    c.when(6, ContentItemGameVariantMetadata, (m) => m.general.file_type)
+  ),
+  activity_data: c.discriminatedUnion(
     { size: 16 },
     c.arm(
       ContentItemMatchmakingMetadata,
-      (m: ContentItemMetadata) => m.general.activity === 3
+      (m) => m.general.activity === 3
     )
-  )
-  activity_data: ContentItemMatchmakingMetadata | null = null;
-}
+  ),
+});
 ```
 
 For a game-variant file (`file_type === 6`), set `file_type_data: { icon_index: 2 }`. When `activity === 3`, set `activity_data: { hopper_identifier: 0 }`; otherwise leave it `null`.
@@ -238,37 +169,23 @@ For a game-variant file (`file_type === 6`), set `file_type_data: { icon_index: 
 Reach file-share **CHDR** chunks prepend a 12-byte BLF header, then the content-header body. Primitives in this chunk are **big-endian**:
 
 ```ts
-@c.struct()
-class BlfChunkContentHeader {
-  @c.field(c.String(4))
-  signature!: string;
-
-  @c.field("u32")
-  chunk_length!: number;
-
-  @c.field("u16")
-  major!: number;
-
-  @c.field("u16")
-  minor!: number;
-
-  @c.field("u16")
-  build_number!: number;
-
-  @c.field("u16")
-  build_sequence_number!: number;
-
-  @c.field(ContentItemMetadata)
-  metadata!: ContentItemMetadata;
-}
+const BlfChunkContentHeader = c.struct({
+  signature: c.String(4),
+  chunk_length: c.u32(),
+  major: c.u16(),
+  minor: c.u16(),
+  build_number: c.u16(),
+  build_sequence_number: c.u16(),
+  metadata: ContentItemMetadata,
+});
 ```
 
-Reading a real chunk from disk (`tests/chdr.bin`):
+Reading a real chunk from disk:
 
 ```ts
 import { readFileSync } from "node:fs";
 
-const bytes = new Uint8Array(readFileSync("tests/chdr.bin"));
+const bytes = readFileSync("tests/examples/fixtures/chdr.bin");
 const chunk = c.read(BlfChunkContentHeader, bytes, "big");
 
 chunk.signature; // "chdr"

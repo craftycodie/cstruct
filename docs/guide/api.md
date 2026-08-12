@@ -1,43 +1,83 @@
-# Struct I/O API
-
-Pass a `@c.struct()` class as the first argument:
-
-| Function | Description |
-|----------|-------------|
-| `c.read(ctor, bytes, endian?)` | Parse bytes into an instance (slice `bytes` if the layout does not start at 0) |
-| `c.write(ctor, instance, endian?)` | Serialize to a new `Uint8Array` |
-| `c.sizeof(ctor)` | Total packed size in bytes |
-| `c.sizeof("u32")` | Size of a primitive type in bytes |
-| `c.json(ctor, instance)` | Struct fields as a JSON-friendly object |
-
-`endian` is `"little"` (default) or `"big"`.
-
-```ts
-const payload = c.read(MyStruct, file.subarray(headerSize), "little");
-const out = c.write(MyStruct, { value: 1 } as MyStruct);
-```
-
-## Advanced field types
-
-Built-in helpers (`c.Bool`, `c.String`, `c.WString`, `c.Time64`, `c.bitfield`) and custom encodings share the same extension point: subclass `c.AdvancedType` and pass an instance to `@c.field`. See [Advanced fields](/guide/advanced-fields/).
-
-## Types on `c`
-
-The `c` namespace also exports layout types (`StructLayoutCtor`, `FieldType`, `UnionField`, …) and helpers (`pad`, `arm`, `when`, `enum`, advanced field factories).
-
-## Errors
-
-Layout and validation failures throw `CStructError` (also `c.CStructError`).
-
-## `c` namespace overview
-
-| Symbol | Role |
-|--------|------|
-| `read`, `write`, `sizeof`, `json` | Struct serialization |
-| `struct`, `field` | Define layouts |
-| `union`, `unionField`, `arm`, `when` | Discriminated unions |
-| `enum` | Integer enum slots |
-| `pad` | Reserved zero bytes |
-| `AdvancedType` | Base class for custom single-slot encodings |
-| `Bool`, `String`, `WString`, `Time64`, `bitfield` | Advanced field factories |
-| `CBool`, `CString`, `CWString`, `CTime64`, `CBitfield` | Advanced field classes |
+# API reference
+
+## `c.read`
+
+```ts
+c.read(schema, buffer, endian?)
+c.read(schema, buffer, offset, endian?)
+c.read(instance, buffer, endian?)
+c.read(instance, buffer, offset, endian?)
+```
+
+Deserialize a `Buffer` using a `c.struct` schema or hydrate a `@c.class()` instance in place.
+
+When the third argument is `"little"` or `"big"`, it is treated as endianness (not an offset). This keeps call sites like `c.read(schema, bytes, "big")` ergonomic.
+
+## `c.write`
+
+```ts
+c.write(schema, data, endian?)
+c.write(instance, endian?)
+```
+
+Serialize to a new `Buffer`.
+
+## `c.sizeof`
+
+```ts
+c.sizeof(schema)
+c.sizeof(instance)
+c.sizeof(DecoratedClass)
+```
+
+Return the packed byte size of a layout.
+
+## Schema factories
+
+| Factory | Description |
+|---------|-------------|
+| `c.struct(fields)` | Object-keyed struct layout |
+| `c.u8()` … `c.f64()`, `c.u64()`, `c.i64()` | Numeric primitives |
+| `c.bool()` | 1-byte boolean |
+| `c.String(n)` / `c.WString(n)` | Fixed strings |
+| `c.Time64()` | 8-byte epoch seconds as `Date` |
+| `c.pad(n)` | Reserved bytes |
+| `c.array(element, count)` | Fixed-length array |
+| `c.Enum(map \| keys, type)` | Validated enum (string keys) |
+| `c.Bitfield(keys, type)` | Sequential bit flags |
+| `c.MagicNumber(n, type)` | Assert-on-read numeric magic |
+| `c.MagicString(s)` | Assert-on-read fixed string |
+| `c.Union({ ... })` | Overlapping C union |
+| `c.discriminatedUnion({ size }, …arms)` | Tagged union slot |
+| `c.class(Ctor)` | Embed a `@c.class()` type in a schema |
+
+## Union helpers
+
+| Helper | Description |
+|--------|-------------|
+| `c.arm(schema, when)` | Discriminated union arm with predicate |
+| `c.when(value, schema, discriminant)` | Shorthand when discriminant equals `value` |
+
+## Decorators
+
+| Decorator | Description |
+|-----------|-------------|
+| `@c.class()` | Mark a class as a struct layout |
+| `@c.field(type, options?)` | Declare a field (`padBefore`, `padAfter`, `count`) |
+
+See [Class decorators](./class-decorators.md).
+
+## Types
+
+| Helper | Description |
+|--------|-------------|
+| `c.infer<T>` | Decoded TypeScript type for a schema or field |
+| `c.UnionOf<Arms>` | Active payload type for discriminated union arms |
+| `c.Endian` | `"little"` \| `"big"` |
+
+See [Type helpers](./type-helpers.md).
+
+## Package exports
+
+`CFieldType`, `CString`, `CEnum`, `CBitfield`, `CMagicNumber`, `CMagicString`, `time64_t`, and utility types `FlattenIntersection`, `Tuple`, `UnionToIntersection` are exported from the package entry for extensions and advanced use.
+

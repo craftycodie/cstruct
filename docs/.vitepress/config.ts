@@ -4,7 +4,7 @@ export default defineConfig({
   title: "cstruct",
   titleTemplate: ":title · @craftycodie/cstruct",
   description:
-    "Stage 3 struct decorators for reading and writing packed binary layouts in TypeScript.",
+    "Schema-first packed binary layouts for TypeScript — c.struct schemas, optional class decorators, and Buffer I/O.",
   base: "/cstruct/",
   cleanUrls: true,
   appearance: "force-dark",
@@ -55,6 +55,8 @@ export default defineConfig({
           { text: "Overview", link: "/" },
           { text: "Install & setup", link: "/guide/install" },
           { text: "Quick start", link: "/guide/quick-start" },
+          { text: "Class decorators", link: "/guide/class-decorators" },
+          { text: "Type helpers", link: "/guide/type-helpers" },
         ],
       },
       {
@@ -68,23 +70,24 @@ export default defineConfig({
         ],
       },
       {
-        text: "Advanced fields",
+        text: "Field types",
         collapsed: false,
         items: [
-          { text: "Overview", link: "/guide/advanced-fields/" },
-          { text: "Custom types", link: "/guide/advanced-fields/custom-types" },
-          { text: "Bool", link: "/guide/advanced-fields/bool" },
-          { text: "String", link: "/guide/advanced-fields/string" },
-          { text: "WString", link: "/guide/advanced-fields/wstring" },
-          { text: "Time64", link: "/guide/advanced-fields/time64" },
-          { text: "Bitfield", link: "/guide/advanced-fields/bitfield" },
+          { text: "Overview", link: "/guide/field-types/" },
+          { text: "Custom types", link: "/guide/field-types/custom-types" },
+          { text: "Bool", link: "/guide/field-types/bool" },
+          { text: "String", link: "/guide/field-types/string" },
+          { text: "WString", link: "/guide/field-types/wstring" },
+          { text: "Time64", link: "/guide/field-types/time64" },
+          { text: "Bitfield", link: "/guide/field-types/bitfield" },
+          { text: "Magic fields", link: "/guide/field-types/magic" },
         ],
       },
       {
         text: "Examples",
         items: [
           { text: "Example structures", link: "/guide/example-structures" },
-          { text: "Vitest & SWC", link: "/guide/vitest" },
+          { text: "Vitest", link: "/guide/vitest" },
         ],
       },
       {

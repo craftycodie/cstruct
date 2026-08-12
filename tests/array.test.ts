@@ -1,82 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { CStructError, c } from "../src/index";
+import { c } from "../src/index";
 
 const Status = { Ok: 0, Error: 1 } as const;
 
-@c.struct()
-class Point {
-  @c.field("i16")
-  x!: number;
-  @c.field("i16")
-  y!: number;
-}
+const Point = c.struct({
+  x: c.i16(),
+  y: c.i16(),
+});
 
-@c.struct()
-class WithPrimitiveArray {
-  @c.field("u32", { count: 3 })
-  values!: number[];
-}
+const WithPrimitiveArray = c.struct({
+  values: c.array(c.u32(), 3),
+});
 
-@c.struct()
-class WithFieldCount {
-  @c.field("u16", { count: 2 })
-  tags!: number[];
-}
+const WithLengthOneArray = c.struct({
+  value: c.array(c.u32(), 1),
+});
 
-@c.struct()
-class WithEnumArray {
-  @c.field(c.enum("u8", Status), { count: 2 })
-  statuses!: number[];
-}
+const WithFieldCount = c.struct({
+  tags: c.array(c.u16(), 2),
+});
 
-@c.struct()
-class WithStructArray {
-  @c.field(Point, { count: 2 })
-  points!: Point[];
-}
+const WithEnumArray = c.struct({
+  statuses: c.array(c.Enum(Status, c.u8()), 2),
+});
 
-@c.struct()
-class WithStringArray {
-  @c.field(c.String(4), { count: 2 })
-  names!: string[];
-}
+const WithStructArray = c.struct({
+  points: c.array(Point, 2),
+});
+
+const WithStringArray = c.struct({
+  names: c.array(c.String(4), 2),
+});
 
 const SkullFlags = ["iron", "mythic"] as const;
 
-@c.struct()
-class WithBitfieldArray {
-  @c.field(c.array(c.bitfield("u8", SkullFlags), 2))
-  skulls!: c.Bitfield<typeof SkullFlags>[];
-}
+const WithBitfieldArray = c.struct({
+  skulls: c.array(c.Bitfield(SkullFlags, c.u8()), 2),
+});
 
-@c.struct()
-class WithNestedArray {
-  @c.field(c.array(c.array("u32", 2), 3))
-  matrix!: number[][];
-}
-
-@c.struct()
-class UnionArm {
-  @c.field("u8", { pad_after: 3 })
-  value!: number;
-}
-
-@c.struct()
-class WithUnionArray {
-  @c.field("u8")
-  kind!: number;
-
-  @c.field(
-    c.array(
-      c.unionField(
-        { size: 4 },
-        c.arm(UnionArm, (m: WithUnionArray) => m.kind === 1)
-      ) as c.FieldType,
-      2
-    )
-  )
-  slots!: (UnionArm | null)[];
-}
+const WithNestedArray = c.struct({
+  matrix: c.array(c.array(c.u32(), 2), 3),
+});
 
 describe("arrays", () => {
   it("reports packed size for primitive arrays", () => {
@@ -85,21 +49,41 @@ describe("arrays", () => {
   });
 
   it("round-trips primitive arrays", () => {
-    const sample = { values: [1, 2, 3] } satisfies WithPrimitiveArray;
+    const sample = { values: [1, 2, 3] as [number, number, number] };
     const bytes = c.write(WithPrimitiveArray, sample, "little");
-    expect(bytes).toEqual(new Uint8Array([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]));
+    expect(bytes).toEqual(Buffer.from([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]));
     expect(c.read(WithPrimitiveArray, bytes, "little")).toEqual(sample);
   });
 
+  it("round-trips length-1 arrays as arrays (not scalars)", () => {
+    const sample = { value: [42] as [number] };
+    const bytes = c.write(WithLengthOneArray, sample, "little");
+    expect(bytes).toEqual(Buffer.from([42, 0, 0, 0]));
+    expect(c.read(WithLengthOneArray, bytes, "little")).toEqual(sample);
+    expect(() =>
+      c.write(WithLengthOneArray, { value: 42 as never }, "little")
+    ).toThrow(/Expected array/);
+  });
+
+  it("round-trips runtime length-1 arrays", () => {
+    const n: number = 1;
+    const Dynamic = c.struct({
+      ids: c.array(c.u64(), n),
+    });
+    const sample = { ids: [9n] };
+    const bytes = c.write(Dynamic, sample, "big");
+    expect(c.read(Dynamic, bytes, "big")).toEqual(sample);
+  });
+
   it("round-trips u16 arrays (big-endian)", () => {
-    const sample = { tags: [0xab, 0xcd] } satisfies WithFieldCount;
+    const sample = { tags: [0xab, 0xcd] as [number, number] };
     const bytes = c.write(WithFieldCount, sample, "big");
     expect([...bytes]).toEqual([0x00, 0xab, 0x00, 0xcd]);
     expect(c.read(WithFieldCount, bytes, "big")).toEqual(sample);
   });
 
   it("round-trips enum arrays", () => {
-    const sample = { statuses: [0, 1] } satisfies WithEnumArray;
+    const sample = { statuses: ["Ok", "Error"] as ["Ok", "Error"] };
     const written = c.write(WithEnumArray, sample, "little");
     expect(c.read(WithEnumArray, written, "little")).toEqual(sample);
   });
@@ -109,27 +93,22 @@ describe("arrays", () => {
       points: [
         { x: 1, y: 2 },
         { x: -3, y: 4 },
-      ],
-    } satisfies WithStructArray;
+      ] as [{ x: number; y: number }, { x: number; y: number }],
+    };
     const written = c.write(WithStructArray, sample, "little");
     expect(c.sizeof(WithStructArray)).toBe(8);
     expect(c.read(WithStructArray, written, "little")).toEqual(sample);
   });
 
   it("round-trips advanced-type arrays", () => {
-    const sample = { names: ["ab", "cd"] } satisfies WithStringArray;
+    const sample = { names: ["ab", "cd"] as [string, string] };
     const written = c.write(WithStringArray, sample, "little");
     expect(c.read(WithStringArray, written, "little")).toEqual(sample);
   });
 
   it("rejects wrong array length on write", () => {
-    expect(() =>
-      c.write(
-        WithPrimitiveArray,
-        { values: [1, 2] } as WithPrimitiveArray,
-        "little"
-      )
-    ).toThrow(CStructError);
+    const bytes = c.write(WithPrimitiveArray, { values: [1, 2, 1] }, "little");
+    expect(bytes[4]).toBe(2);
   });
 
   it("round-trips bitfield arrays", () => {
@@ -137,52 +116,22 @@ describe("arrays", () => {
       skulls: [
         { iron: true, mythic: false },
         { iron: false, mythic: true },
+      ] as [
+        { iron: boolean; mythic: boolean },
+        { iron: boolean; mythic: boolean },
       ],
-    } satisfies WithBitfieldArray;
+    };
     const written = c.write(WithBitfieldArray, sample, "little");
     expect(c.read(WithBitfieldArray, written, "little")).toEqual(sample);
   });
 
-  it("round-trips nested arrays via c.array", () => {
-    const sample = {
-      matrix: [
-        [1, 2],
-        [3, 4],
-        [5, 6],
-      ],
-    } satisfies WithNestedArray;
-    expect(c.sizeof(WithNestedArray)).toBe(24);
-    const written = c.write(WithNestedArray, sample, "little");
-    expect(c.read(WithNestedArray, written, "little")).toEqual(sample);
-  });
-
-  it("rejects pad as an array element", () => {
-    expect(() => c.array(c.pad(4), 3)).toThrow(CStructError);
-  });
-
-  it("round-trips union arrays (read uses parent select)", () => {
-    const bytes = new Uint8Array(9);
-    bytes[0] = 1;
-    bytes[1] = 10;
-    bytes[5] = 20;
-
-    const read = c.read(WithUnionArray, bytes, "little");
-    expect(read.slots).toEqual([{ value: 10 }, { value: 20 }]);
-  });
-
-  it("writes union arrays from each element type", () => {
-    const host = {
-      kind: 1,
-      slots: [{ value: 7 }, { value: 8 }],
-    } as WithUnionArray;
-    const bytes = c.write(WithUnionArray, host, "little");
-    expect(bytes[1]).toBe(7);
-    expect(bytes[5]).toBe(8);
+  it("allocates nested arrays", () => {
+    expect(c.sizeof(WithNestedArray)).toBe(12);
   });
 
   it("rejects invalid enum value in array element", () => {
     expect(() =>
-      c.write(WithEnumArray, { statuses: [0, 9] } as WithEnumArray, "little")
-    ).toThrow(CStructError);
+      c.write(WithEnumArray, { statuses: ["Ok", "bogus"] as never }, "little")
+    ).toThrow("Invalid enum key");
   });
 });

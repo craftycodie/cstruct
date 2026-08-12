@@ -3,164 +3,93 @@ import { join } from "node:path";
 import { c } from "@craftycodie/cstruct";
 import { describe, expect, it } from "vitest";
 
-/** Reach `s_content_item_film_metadata` (16-byte union arm). */
-@c.struct()
-class ContentItemFilmMetadata {
-  @c.field("i32", { pad_after: 12 })
-  seconds!: number;
-}
+const ContentItemFilmMetadata = c.struct({
+  seconds: c.i32(),
+  _pad: c.pad(12),
+});
 
-/** Reach `s_content_item_game_variant_metadata` (16-byte union arm). */
-@c.struct()
-class ContentItemGameVariantMetadata {
-  @c.field("i8", { pad_after: 15 })
-  icon_index!: number;
-}
+const ContentItemGameVariantMetadata = c.struct({
+  icon_index: c.u8(),
+  _pad: c.pad(15),
+});
 
-/** Reach `s_content_item_matchmaking_metadata` (16-byte union arm). */
-@c.struct()
-class ContentItemMatchmakingMetadata {
-  @c.field("u16", { pad_after: 14 })
-  hopper_identifier!: number;
-}
+const ContentItemMatchmakingMetadata = c.struct({
+  hopper_identifier: c.u16(),
+  _pad: c.pad(14),
+});
 
-@c.struct()
-class ContentItemHistory {
-  @c.field(c.Time64())
-  timestamp!: Date;
+const ContentItemHistory = c.struct({
+  timestamp: c.Time64(),
+  xuid: c.u64(),
+  name: c.String(16),
+  is_online: c.u8({ padAfter: 3 }),
+});
 
-  @c.field("u64")
-  xuid!: bigint;
+const ContentItemGeneralMetadata = c.struct({
+  file_type: c.i8({ padAfter: 3 }),
+  size_in_bytes: c.u32(),
+  unique_id: c.u64(),
+  parent_unique_id: c.u64(),
+  root_unique_id: c.u64(),
+  game_id: c.u64(),
+  activity: c.i8(),
+  game_mode: c.u8(),
+  game_engine_type: c.u8({ padAfter: 1 }),
+  map_id: c.i32(),
+});
 
-  @c.field(c.String(16))
-  name!: string;
+const ContentItemDisplayMetadata = c.struct({
+  megalo_category_index: c.i8({ padAfter: 7 }),
+});
 
-  @c.field("u8", { pad_after: 3 })
-  is_online!: number;
-}
-
-@c.struct()
-class ContentItemGeneralMetadata {
-  @c.field("i8", { pad_after: 3 })
-  file_type!: number;
-
-  @c.field("u32")
-  size_in_bytes!: number;
-
-  @c.field("u64")
-  unique_id!: bigint;
-
-  @c.field("u64")
-  parent_unique_id!: bigint;
-
-  @c.field("u64")
-  root_unique_id!: bigint;
-
-  @c.field("u64")
-  game_id!: bigint;
-
-  @c.field("i8")
-  activity!: number;
-
-  @c.field("u8")
-  game_mode!: number;
-
-  @c.field("u8", { pad_after: 1 })
-  game_engine_type!: number;
-
-  @c.field("i32")
-  map_id!: number;
-}
-
-@c.struct()
-class ContentItemDisplayMetadata {
-  @c.field("i8", { pad_after: 7 })
-  megalo_category_index!: number;
-}
-
-/** Reach `c_content_item_metadata` (packed; unions mirror binrw layout). */
-@c.struct()
-class ContentItemMetadata {
-  @c.field(ContentItemGeneralMetadata)
-  general!: ContentItemGeneralMetadata;
-
-  @c.field(ContentItemDisplayMetadata)
-  display!: ContentItemDisplayMetadata;
-
-  @c.field(ContentItemHistory)
-  creation_history!: ContentItemHistory;
-
-  @c.field(ContentItemHistory)
-  modification_history!: ContentItemHistory;
-
-  @c.field(c.WString(0x80))
-  name!: string;
-
-  @c.field(c.WString(0x80))
-  description!: string;
-
-  @c.union(
+const ContentItemMetadata = c.struct({
+  general: ContentItemGeneralMetadata,
+  display: ContentItemDisplayMetadata,
+  creation_history: ContentItemHistory,
+  modification_history: ContentItemHistory,
+  name: c.WString(0x80),
+  description: c.WString(0x80),
+  file_type_data: c.discriminatedUnion(
     { size: 16 },
     c.when(
       3,
       ContentItemFilmMetadata,
-      (m: ContentItemMetadata) => m.general.file_type
+      (m) => (m as { general: { file_type: number } }).general.file_type
     ),
     c.when(
       4,
       ContentItemFilmMetadata,
-      (m: ContentItemMetadata) => m.general.file_type
+      (m) => (m as { general: { file_type: number } }).general.file_type
     ),
     c.when(
       6,
       ContentItemGameVariantMetadata,
-      (m: ContentItemMetadata) => m.general.file_type
+      (m) => (m as { general: { file_type: number } }).general.file_type
     )
-  )
-  file_type_data:
-    | ContentItemFilmMetadata
-    | ContentItemGameVariantMetadata
-    | null = null;
-
-  @c.union(
+  ),
+  activity_data: c.discriminatedUnion(
     { size: 16 },
     c.arm(
       ContentItemMatchmakingMetadata,
-      (m: ContentItemMetadata) => m.general.activity === 3
+      (m) => (m as { general: { activity: number } }).general.activity === 3
     )
-  )
-  activity_data: ContentItemMatchmakingMetadata | null = null;
-}
+  ),
+});
 
-/** BLF chunk: 12-byte header + `s_blf_chunk_content_header` body (big-endian). */
-@c.struct()
-class BlfChunkContentHeader {
-  @c.field(c.String(4))
-  signature!: string;
-
-  @c.field("u32")
-  chunk_length!: number;
-
-  @c.field("u16")
-  major!: number;
-
-  @c.field("u16")
-  minor!: number;
-
-  @c.field("u16")
-  build_number!: number;
-
-  @c.field("u16")
-  build_sequence_number!: number;
-
-  @c.field(ContentItemMetadata)
-  metadata!: ContentItemMetadata;
-}
+const BlfChunkContentHeader = c.struct({
+  signature: c.String(4),
+  chunk_length: c.u32(),
+  major: c.u16(),
+  minor: c.u16(),
+  build_number: c.u16(),
+  build_sequence_number: c.u16(),
+  metadata: ContentItemMetadata,
+});
 
 const CHDR_FIXTURE = join(import.meta.dirname, "./fixtures/chdr.bin");
 
 describe("chdr.bin fixture", () => {
-  const bytes = new Uint8Array(readFileSync(CHDR_FIXTURE));
+  const bytes = readFileSync(CHDR_FIXTURE);
 
   it("reads the Halo Reach CHDR chunk (big-endian)", () => {
     const chunk = c.read(BlfChunkContentHeader, bytes, "big");

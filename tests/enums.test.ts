@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CStructError, c } from "../src/index";
+import { c } from "../src/index";
 
 const Activity = {
   None: 0,
@@ -11,38 +11,32 @@ const FileType = {
   GameVariant: 6,
 } as const;
 
-@c.struct()
-class GeneralMetadata {
-  @c.field(c.enum("i8", FileType), { pad_after: 3 })
-  file_type!: number;
-
-  @c.field("u32")
-  size_in_bytes!: number;
-
-  @c.field(c.enum("i8", Activity))
-  activity!: number;
-}
+const GeneralMetadata = c.struct({
+  file_type: c.Enum(FileType, c.i8(), { padAfter: 3 }),
+  size_in_bytes: c.u32(),
+  activity: c.Enum(Activity, c.i8()),
+});
 
 describe("enums", () => {
-  it("round-trips allowed enum values", () => {
+  it("round-trips allowed enum values as keys", () => {
     const value = {
-      file_type: FileType.Film,
+      file_type: "Film" as const,
       size_in_bytes: 4096,
-      activity: Activity.Matchmaking,
-    } satisfies GeneralMetadata;
+      activity: "Matchmaking" as const,
+    };
 
     const written = c.write(GeneralMetadata, value, "little");
     const read = c.read(GeneralMetadata, written, "little");
-    expect(read.file_type).toBe(FileType.Film);
-    expect(read.activity).toBe(Activity.Matchmaking);
+    expect(read.file_type).toBe("Film");
+    expect(read.activity).toBe("Matchmaking");
     expect(read.size_in_bytes).toBe(4096);
   });
 
   it("rejects undefined values on read", () => {
-    const bytes = new Uint8Array(8);
+    const bytes = Buffer.alloc(8);
     bytes[0] = 99;
     expect(() => c.read(GeneralMetadata, bytes, "little")).toThrow(
-      CStructError
+      "Enum value 99 is not a valid enum value"
     );
   });
 
@@ -51,12 +45,12 @@ describe("enums", () => {
       c.write(
         GeneralMetadata,
         {
-          file_type: FileType.Film,
+          file_type: "Film",
           size_in_bytes: 0,
-          activity: 2,
-        } as GeneralMetadata,
+          activity: "bogus" as never,
+        },
         "little"
       )
-    ).toThrow(CStructError);
+    ).toThrow("Invalid enum key");
   });
 });

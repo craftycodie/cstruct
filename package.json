@@ -1,7 +1,7 @@
 {
   "name": "@craftycodie/cstruct",
-  "version": "1.1.1",
-  "description": "Stage 3 struct decorators for packed binary layouts",
+  "version": "2.0.0-alpha.3",
+  "description": "Schema-first binary struct layouts for TypeScript (packed read/write with c.struct and @c.class)",
   "type": "module",
   "main": "./dist-cjs/index.js",
   "types": "./dist/index.d.ts",
@@ -44,7 +44,9 @@
     "decorators",
     "serialization",
     "packed",
-    "cstruct"
+    "cstruct",
+    "buffer",
+    "schema"
   ],
   "license": "MIT",
   "publishConfig": {
