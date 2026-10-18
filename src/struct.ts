@@ -98,13 +98,18 @@ type ProcessSchemaField<K extends string, F extends StructFieldValue> =
             : never
         : { [Key in K]: NestedStructSchema<F> };
 
-export type StructSchemaToTS<F extends StructFields> = FlattenIntersection<
-  UnionToIntersection<
-    {
-      [K in keyof F]: ProcessSchemaField<K & string, F[K]>;
-    }[keyof F]
-  >
->;
+export type StructSchemaToTS<F extends StructFields> =
+  // The wide `Struct` (any fields) decodes to any record, so every concrete
+  // struct stays assignable to `c.Struct`.
+  string extends keyof F
+    ? Record<string, any>
+    : FlattenIntersection<
+        UnionToIntersection<
+          {
+            [K in keyof F]: ProcessSchemaField<K & string, F[K]>;
+          }[keyof F]
+        >
+      >;
 
 export interface StructField {
   count?: number;
@@ -141,7 +146,7 @@ export class Struct<F extends StructFields = StructFields> {
 
   private constructor(fields: F, options?: StructOptions) {
     this.options = options ?? {};
-    this.layout = computeLayout(fields);
+    this.layout = computeLayout(fields, this.options);
     this.byteSize = this.layout.size;
   }
 
@@ -289,6 +294,11 @@ export class Struct<F extends StructFields = StructFields> {
 
   getSize(): number {
     return this.byteSize;
+  }
+
+  /** 1 for packed structs (the default), else the largest field alignment. */
+  getAlign(): number {
+    return this.layout.align;
   }
 }
 

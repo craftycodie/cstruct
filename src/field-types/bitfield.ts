@@ -47,6 +47,10 @@ export class CBitfield<
     return this.type.getSize();
   }
 
+  getAlign(): number {
+    return this.type.getAlign();
+  }
+
   read(
     buffer: Uint8Array,
     offset: number,

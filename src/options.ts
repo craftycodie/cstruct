@@ -1,6 +1,7 @@
 import type { Endian } from "./field-type";
+import type { LayoutOptions } from "./layout";
 
-export interface StructOptions {
+export interface StructOptions extends LayoutOptions {
   /** Byte order for every field of this struct, overriding the call site. */
   endian?: Endian;
 }

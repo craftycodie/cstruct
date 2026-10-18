@@ -4,6 +4,7 @@ import type { Endian as EndianType } from "./field-type";
 import {
   i64 as bigintI64,
   u64 as bigintU64,
+  bits as bitsField,
   bool as boolField,
   bytes as bytesField,
   CBitfield,
@@ -65,6 +66,7 @@ export function Time64<const O extends IFieldOptions = {}>(options?: O) {
   return time64Field(options);
 }
 
+export const bits = bitsField;
 export const bool = boolField;
 export const bytes = bytesField;
 

@@ -39,6 +39,10 @@ export class CWString<
     return this.length * 2;
   }
 
+  getAlign(): number {
+    return 2;
+  }
+
   [COMPILE](env: CompileEnv): Codec<string> {
     const length = this.length;
     const little = env.endian === "little";

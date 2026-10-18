@@ -11,6 +11,7 @@ import {
   type StructFieldValue,
   unwrapFieldType,
 } from "./field";
+import { alignOf } from "./field-type";
 
 export class CArray<
   T extends StructFieldValue = StructFieldValue,
@@ -40,6 +41,10 @@ export class CArray<
 
   getSize(): number {
     return this.elementType.getSize() * this.count;
+  }
+
+  getAlign(): number {
+    return alignOf(this.elementType);
   }
 
   [COMPILE](env: CompileEnv): Codec<unknown[]> {

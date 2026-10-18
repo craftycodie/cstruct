@@ -181,6 +181,10 @@ export class CNumber<
     return NUMBER_TYPE_SIZES[this.kind];
   }
 
+  getAlign(): number {
+    return NUMBER_TYPE_SIZES[this.kind];
+  }
+
   read(buffer: Uint8Array, offset: number, endian: Endian): NumberTypeToTS<K> {
     return readWith(this, buffer, offset, endian);
   }

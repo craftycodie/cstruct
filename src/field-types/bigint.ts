@@ -87,6 +87,10 @@ export class CBigint<
     return 8;
   }
 
+  getAlign(): number {
+    return 8;
+  }
+
   read(buffer: Uint8Array, offset: number, endian: Endian): BigintTypeToTS<K> {
     return readWith(this, buffer, offset, endian);
   }

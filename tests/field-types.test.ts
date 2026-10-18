@@ -36,6 +36,11 @@ describe("c.infer", () => {
     } | null>();
   });
 
+  it("accepts any struct where c.Struct is expected", () => {
+    const schemas: c.Struct[] = [Point, Host];
+    expect(schemas).toHaveLength(2);
+  });
+
   it("uses tuples below 100 elements and arrays from 100 up", () => {
     const small = c.array(c.u8(), 3);
     const edge = c.array(c.u8(), 99);

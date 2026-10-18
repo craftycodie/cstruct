@@ -10,7 +10,7 @@ import {
 } from "./engine/codec";
 import { checkRange, createCtx } from "./engine/ctx";
 import type { FieldOptions, StructFieldType } from "./field";
-import { CFieldType, type Endian } from "./field-type";
+import { alignOf, CFieldType, type Endian } from "./field-type";
 import type { cImpl as CTypes } from "./impl";
 
 /** C-style union where multiple structs share the same memory location. */
@@ -42,6 +42,10 @@ export class CUnion<
 
   getSize(): number {
     return this.maxSize;
+  }
+
+  getAlign(): number {
+    return Math.max(1, ...this.structs.map(alignOf));
   }
 
   read(
@@ -234,6 +238,10 @@ export class CDiscriminatedUnion<
 
   getSize(): number {
     return this.size;
+  }
+
+  getAlign(): number {
+    return Math.max(1, ...this.armStructs.map(alignOf));
   }
 
   read(

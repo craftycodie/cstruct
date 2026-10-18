@@ -26,6 +26,7 @@ export namespace cImpl {
   export import String = fieldFactories.String;
   export import WString = fieldFactories.WString;
   export import Time64 = fieldFactories.Time64;
+  export import bits = fieldFactories.bits;
   export import bool = fieldFactories.bool;
   export import bytes = fieldFactories.bytes;
   export import MagicNumber = fieldFactories.MagicNumber;

@@ -29,6 +29,10 @@ export class CMagicNumber<
     return this.type.getSize();
   }
 
+  getAlign(): number {
+    return this.type.getAlign();
+  }
+
   read(buffer: Uint8Array, offset: number, endian: Endian): N {
     return readWith(this, buffer, offset, endian);
   }

@@ -21,6 +21,10 @@ export class time64_t<const O extends FieldOptions = {}> extends CFieldType<
     return 8;
   }
 
+  getAlign(): number {
+    return 8;
+  }
+
   read(buffer: Uint8Array, offset: number, endian: Endian): Date {
     return readWith(this, buffer, offset, endian);
   }
