@@ -1,4 +1,4 @@
-# Bitfield — `c.Bitfield(keys, storage)`
+# Bitfield — `c.bitfield(keys, storage)`
 
 Flag groups packed into an integer primitive. Each flag is a **boolean** on read/write; cstruct packs them into **sequential** bit indices inside the storage width (`c.u8()`, `c.u32()`, …).
 
@@ -17,7 +17,7 @@ const SkullFlags = [
 ] as const;
 
 const Challenge = c.struct({
-  skulls: c.Bitfield(SkullFlags, c.u32()),
+  skulls: c.bitfield(SkullFlags, c.u32()),
 });
 
 const chunk = {
@@ -42,7 +42,7 @@ const bytes = c.write(Challenge, chunk, "big");
 #define SKULL_CATCH       (1u << 3)
 
 typedef struct {
-    uint32_t skulls; /* c.Bitfield(SkullFlags, c.u32()) */
+    uint32_t skulls; /* c.bitfield(SkullFlags, c.u32()) */
 } Challenge;
 
 /* iron + tough_luck set: skulls == 0x5 */
@@ -52,9 +52,9 @@ typedef struct {
 
 Unnamed bits read as `false` for each defined key. On write, only named flags are packed — reserved bits are cleared.
 
-## vs `c.Enum`
+## vs `c.enum`
 
-| | `c.Enum` | `c.Bitfield` |
+| | `c.enum` | `c.bitfield` |
 | --- | --- | --- |
 | Value | One of N discrete values | Bit mask (combinable flags) |
 | TypeScript | string key | `{ flag: boolean, ... }` |
@@ -62,6 +62,10 @@ Unnamed bits read as `false` for each defined key. On write, only named flags ar
 
 For a single true/false byte (not combinable flags), use [Boolean](./bool.md) instead.
 
-## Custom bit layouts
+Storage can be any integer type, including `c.u64()` for up to 64 flags. Creating a bitfield with more flags than its storage has bits throws.
 
-v2 only supports sequential bit indices. For sparse or non-sequential layouts, subclass `CFieldType` (see [Custom types](./custom-types.md)) and implement your own packing rules.
+## Multi-bit fields
+
+For fields wider than one bit, use [`c.bits`](./bits.md). For sparse or unusual layouts, subclass `CFieldType` (see [Custom types](./custom-types.md)).
+
+`c.Bitfield` is a deprecated alias of `c.bitfield`.

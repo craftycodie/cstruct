@@ -5,7 +5,7 @@ import {
   isClassCtor,
   isClassInstance,
 } from "./class";
-import { envFor, ownCodec } from "./engine/codec";
+import { compileType, envFor } from "./engine/codec";
 import type { BytesLike } from "./engine/ctx";
 import { runRead, runWrite } from "./engine/run";
 import { cImpl } from "./impl";
@@ -74,7 +74,7 @@ export function read(
   }
   if (isCArray(target)) {
     return runRead(
-      ownCodec(target, envFor(resolved.endian)),
+      compileType(target, envFor(resolved.endian)),
       target.getSize(),
       buffer,
       resolved.offset
@@ -136,7 +136,7 @@ export function write(
     }
     const resolved = resolveWrite(arg3);
     return runWrite(
-      ownCodec(target, envFor(resolved.endian, resolved.checked)),
+      compileType(target, envFor(resolved.endian, resolved.checked)),
       target.getSize(),
       arg2,
       resolved

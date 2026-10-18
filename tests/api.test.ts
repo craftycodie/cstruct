@@ -241,6 +241,26 @@ describe("chain modifiers", () => {
     );
   });
 
+  it("applies struct and array assertions at the top level", () => {
+    const Range = c
+      .struct({ lo: c.u8(), hi: c.u8() })
+      .assert((r) => r.lo <= r.hi, "lo must not exceed hi");
+    expect(() => c.read(Range, Buffer.from([5, 1]))).toThrow(
+      "read failed: lo must not exceed hi"
+    );
+    expect(() => c.write(Range, { lo: 5, hi: 1 })).toThrow(
+      "write failed: lo must not exceed hi"
+    );
+    const Sorted = c
+      .u8()
+      .array(3)
+      .assert((v) => v[0] <= v[1] && v[1] <= v[2], "must be sorted");
+    expect(() => c.read(Sorted, Buffer.from([3, 2, 1]))).toThrow(
+      "must be sorted"
+    );
+    expect(c.read(Sorted, Buffer.from([1, 2, 3]))).toEqual([1, 2, 3]);
+  });
+
   it("leaves the original field untouched", () => {
     const base = c.u16();
     const padded = base.padBefore(2);

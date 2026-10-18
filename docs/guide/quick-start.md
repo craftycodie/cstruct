@@ -1,59 +1,79 @@
 # Quick start
 
-Everything public lives on the `c` object: schema factories, optional decorators, and struct I/O.
+Everything public lives on the `c` object: schema factories, decorators, and I/O.
 
 ## Schema-first
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-const Example = c.struct({
-  value: c.u32(),
+const Header = c.struct({
+  magic: c.MagicString("HDR1"),
+  version: c.u16().default(2),
+  length: c.u32(),
 });
 
-const bytes = c.write(Example, { value: 42 }, "big");
-const data = c.read(Example, bytes, "big");
+const bytes = c.write(Header, { length: 42 }, "big"); // magic and version filled in
+const header = c.read(Header, bytes, "big");
 
-console.log(data.value); // 42
-console.log(c.sizeof(Example)); // 4
+console.log(header.length); // 42
+console.log(c.sizeof(Header)); // 10
 ```
+
+Schemas also carry the same operations as methods: `Header.read(bytes)`, `Header.write(data)`, `Header.size`, `Header.offsetOf("length")`.
+
+## Types
+
+```ts
+type Header = c.infer<typeof Header>;
+// { magic: "HDR1"; version: number; length: number }
+
+type HeaderInput = c.input<typeof Header>;
+// { length: number; magic?: "HDR1"; version?: number }
+```
+
+See [Type helpers](./type-helpers.md).
 
 ## Class decorators
 
 ```ts
-import { c } from "@craftycodie/cstruct";
-
 @c.class()
-class Example {
+class Header {
+  @c.field(c.u16())
+  version = 0;
+
   @c.field(c.u32())
-  value!: number;
+  length = 0;
 }
 
-const instance = new Example();
-instance.value = 42;
-
-const bytes = c.write(instance);
-c.read(instance, bytes);
-console.log(c.sizeof(instance)); // 4
+const header = c.read(Header, bytes); // new Header instance
+header.length += 1;
+const out = c.write(header);
 ```
 
-Mix schemas and decorated classes with `c.class(Ctor)` — see [Class decorators](/guide/class-decorators).
-
-Derive TypeScript types from layouts with `c.infer<typeof Schema>` — see [Type helpers](/guide/type-helpers).
+Mix schemas and decorated classes with `c.class(Ctor)`. See [Class decorators](./class-decorators.md).
 
 ## I/O
 
-- `c.read(schema, buffer, endian?)` or `c.read(schema, buffer, offset, endian?)`
-- `c.read(instance, buffer, endian?)` — mutates the instance in place
-- `c.write(schema, data, endian?)` or `c.write(instance, endian?)`
-- `c.sizeof(schema | instance | class)`
+| Call | Result |
+| --- | --- |
+| `c.read(schema, bytes, offset?, endian?)` | Decoded object |
+| `c.read(schema, bytes, { offset, endian })` | Same, with options |
+| `c.read(Class, bytes, …)` | New class instance |
+| `c.read(instance, bytes, …)` | Fills and returns `instance` |
+| `c.write(schema, data, endian?)` | New `Buffer` |
+| `c.write(schema, data, { endian, into, offset, checked })` | Writes into `into` when given |
+| `c.write(instance, endianOrOptions?)` | New `Buffer` |
+| `c.sizeof(schema \| class \| instance \| field)` | Size in bytes |
+| `c.offsetof(schema \| class, "a.b[2].c")` | Byte offset of a field |
+
+`bytes` can be a `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`.
 
 Read from an offset inside a larger buffer:
 
 ```ts
-const file = Buffer.alloc(8);
-file.writeUInt32BE(42, 4);
-const atEnd = c.read(Example, file, 4, "big");
+const file = Buffer.alloc(16);
+const header = c.read(Header, file, { offset: 4, endian: "big" });
 ```
 
-Next: [Primitives & padding](/guide/primitives).
+Next: [Primitives & padding](./primitives.md).

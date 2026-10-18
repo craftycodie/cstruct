@@ -27,6 +27,7 @@ import { isCPadding } from "./field-types/padding";
 import { computeLayout, type Layout } from "./layout";
 import type { CMatch } from "./match";
 import type { OptionalInput } from "./modifiers";
+import { checkAsserts } from "./modifiers";
 import {
   type ReadOptions,
   resolveRead,
@@ -282,7 +283,9 @@ export class Struct<F extends StructFields = StructFields> {
     try {
       const ctx = createCtx(buffer);
       checkRange(ctx.u8, offset, this.byteSize);
-      return plan.readInto(ctx, offset, out);
+      const result = plan.readInto(ctx, offset, out);
+      checkAsserts(this.options, result);
+      return result;
     } catch (error) {
       throw asCStructError(error, "read");
     }
@@ -294,7 +297,9 @@ export class Struct<F extends StructFields = StructFields> {
     try {
       const ctx = createCtx(buffer);
       checkRange(ctx.u8, offset, this.byteSize);
-      return plan.read(ctx, offset);
+      const result = plan.read(ctx, offset);
+      checkAsserts(this.options, result);
+      return result;
     } catch (error) {
       throw asCStructError(error, "read");
     }
@@ -339,6 +344,11 @@ export class Struct<F extends StructFields = StructFields> {
     endianOrOptions?: EndianType | WriteOptions
   ): Buffer {
     const resolved = resolveWrite(endianOrOptions);
+    try {
+      checkAsserts(this.options, data);
+    } catch (error) {
+      throw asCStructError(error, "write");
+    }
     return runWrite(
       this.plan(resolved.endian, resolved.checked),
       this.byteSize,

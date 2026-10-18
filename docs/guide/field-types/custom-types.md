@@ -5,8 +5,11 @@ Subclass `CFieldType` when you need a format that is not a primitive, nested str
 - `getSize()` — fixed width of this slot in bytes
 - `read(buffer, offset, endian)` — decode bytes to `T`
 - `write(buffer, offset, value, endian)` — encode `T` into the buffer
+- optionally `getAlign()` — natural alignment for structs declared with `align` or `pack` (default 1)
 
 `c.sizeof` includes `getSize()` in the struct total.
+
+`buffer` is the whole input or output (a `Buffer`, or a `Uint8Array` where `Buffer` does not exist), and `offset` is the field's absolute position in it. The struct checks bounds before calling you, so `offset + getSize()` always fits. Modifiers (`.array()`, `.transform()`, `.default()`, …) work on custom types too.
 
 ```ts
 import { CFieldType, c } from "@craftycodie/cstruct";
@@ -51,3 +54,7 @@ typedef struct {
 ```
 
 Built-in helpers (`CBool`, `CString`, `CWString`, `CBitfield`) extend `CFieldType` the same way and are exported if you need `instanceof` checks. See the [overview](./index.md) for built-in field types.
+
+## Subclassing built-in types
+
+Subclasses of built-in classes such as `CNumber` keep their overridden `read` / `write`: cstruct only uses its compiled fast path while those methods are the built-in ones.
