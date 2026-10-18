@@ -61,12 +61,12 @@ export class CBigint<
     return 8;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): BigintTypeToTS<K> {
+  read(buffer: Uint8Array, offset: number, endian: Endian): BigintTypeToTS<K> {
     return readWith(this, buffer, offset, endian);
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: BigintTypeToTS<K>,
     endian: Endian

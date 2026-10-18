@@ -57,12 +57,12 @@ export class CEnum<
     return this.type.getSize();
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): EnumKeys<T> {
+  read(buffer: Uint8Array, offset: number, endian: Endian): EnumKeys<T> {
     return readWith(this, buffer, offset, endian);
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: EnumKeys<T>,
     endian: Endian

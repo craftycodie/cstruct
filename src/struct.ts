@@ -1,5 +1,10 @@
 import { COMPILE, ownCodec } from "./engine/codec";
-import { checkRange, createCtx } from "./engine/ctx";
+import {
+  allocBytes,
+  type BytesLike,
+  checkRange,
+  createCtx,
+} from "./engine/ctx";
 import { compileStruct, type StructPlan } from "./engine/plan";
 import { asCStructError } from "./errors";
 import {
@@ -120,30 +125,32 @@ export class Struct<F extends StructFields = StructFields> {
 
   /** @internal Read into `out` (a fresh record or a class instance). */
   readInto<T extends object>(
-    buffer: Uint8Array,
+    buffer: BytesLike,
     offset: number,
     endian: EndianType,
     out: T
   ): T {
     const plan = this.plan(endian);
     try {
-      checkRange(buffer, offset, this.size);
-      return plan.readInto(createCtx(buffer), offset, out);
+      const ctx = createCtx(buffer);
+      checkRange(ctx.u8, offset, this.size);
+      return plan.readInto(ctx, offset, out);
     } catch (error) {
       throw asCStructError(error, "read");
     }
   }
 
   read(
-    buffer: Buffer,
+    buffer: BytesLike,
     offset = 0,
     endian: EndianType = "little"
   ): StructSchemaToTS<F> {
     return this.readInto(buffer, offset, endian, {}) as StructSchemaToTS<F>;
   }
 
+  /** Returns a `Buffer` when the runtime has one, else a `Uint8Array`. */
   write(data: Record<string, any>, endian: EndianType = "little"): Buffer {
-    const buffer = Buffer.alloc(this.size);
+    const buffer = allocBytes(this.size);
     const plan = this.plan(endian);
     try {
       plan.write(createCtx(buffer), 0, data);

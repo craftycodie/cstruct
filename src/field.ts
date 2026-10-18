@@ -10,7 +10,7 @@ export interface FieldOptions {
 /** Runtime shape shared by nested struct field types. */
 export interface StructFieldType {
   getSize(): number;
-  read(buffer: Buffer, offset?: number, endian?: Endian): unknown;
+  read(buffer: Uint8Array, offset?: number, endian?: Endian): unknown;
   write(data: Record<string, unknown>, endian?: Endian): Buffer;
 }
 

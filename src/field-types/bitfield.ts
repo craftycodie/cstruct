@@ -47,7 +47,7 @@ export class CBitfield<
   }
 
   read(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     endian: Endian
   ): {
@@ -57,7 +57,7 @@ export class CBitfield<
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: { [Key in K[number]]: boolean },
     endian: Endian

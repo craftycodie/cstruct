@@ -18,12 +18,12 @@ export class CPadding<const O extends FieldOptions = {}> extends CFieldType<
     return this.bytes;
   }
 
-  read(_buffer: Buffer, _offset: number, _endian: Endian): undefined {
+  read(_buffer: Uint8Array, _offset: number, _endian: Endian): undefined {
     return;
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     _value: undefined,
     _endian: Endian

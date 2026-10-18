@@ -21,11 +21,16 @@ export class CWString<
     this.length = length;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): string {
+  read(buffer: Uint8Array, offset: number, endian: Endian): string {
     return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: string, endian: Endian): void {
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: string,
+    endian: Endian
+  ): void {
     writeWith(this, buffer, offset, value, endian);
   }
 

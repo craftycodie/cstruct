@@ -43,7 +43,7 @@ export class CUnion<
   }
 
   read(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     endian: Endian
   ): {
@@ -53,7 +53,7 @@ export class CUnion<
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: { [K in keyof S]?: CTypes.infer<S[K]> },
     endian: Endian
@@ -62,7 +62,7 @@ export class CUnion<
   }
 
   readMember<K extends keyof S>(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     memberName: K,
     endian: Endian
@@ -75,7 +75,7 @@ export class CUnion<
   }
 
   writeMember<K extends keyof S>(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     memberName: K,
     value: CTypes.infer<S[K]>,
@@ -85,13 +85,9 @@ export class CUnion<
     if (!struct) {
       throw new Error(`Union member '${String(memberName)}' not found`);
     }
-    checkRange(buffer, offset, struct.getSize());
-    compileType(struct, endian).write(
-      createCtx(buffer),
-      offset,
-      value,
-      NO_PARENT
-    );
+    const ctx = createCtx(buffer);
+    checkRange(ctx.u8, offset, struct.getSize());
+    compileType(struct, endian).write(ctx, offset, value, NO_PARENT);
   }
 
   [COMPILE](endian: Endian): Codec<Record<string, unknown>> {
@@ -239,7 +235,7 @@ export class CDiscriminatedUnion<
   }
 
   read(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     endian: Endian,
     parent: Record<string, unknown>
@@ -248,7 +244,7 @@ export class CDiscriminatedUnion<
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: UnionOfArms<Arms> | null | undefined,
     endian: Endian,

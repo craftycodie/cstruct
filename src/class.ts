@@ -31,7 +31,7 @@ interface StructLike {
   field(options?: FieldOptions): CStructField<StructLike, FieldOptions>;
   getSize(): number;
   read(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset?: number,
     endian?: "little" | "big"
   ): Record<string, unknown>;

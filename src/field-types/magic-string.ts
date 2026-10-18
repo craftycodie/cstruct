@@ -22,11 +22,11 @@ export class CMagicString<
     return this.bytes.length;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): S {
+  read(buffer: Uint8Array, offset: number, endian: Endian): S {
     return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: S, endian: Endian): void {
+  write(buffer: Uint8Array, offset: number, value: S, endian: Endian): void {
     writeWith(this, buffer, offset, value, endian);
   }
 

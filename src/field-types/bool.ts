@@ -27,11 +27,16 @@ export class CBool<const O extends FieldOptions = {}> extends CFieldType<
     return 1;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): boolean {
+  read(buffer: Uint8Array, offset: number, endian: Endian): boolean {
     return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: boolean, endian: Endian): void {
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: boolean,
+    endian: Endian
+  ): void {
     writeWith(this, buffer, offset, value, endian);
   }
 

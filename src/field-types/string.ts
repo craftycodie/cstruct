@@ -6,6 +6,7 @@ import {
   writeWith,
 } from "../engine/codec";
 import { ctxBuffer } from "../engine/ctx";
+import { decodeBytes, encodeBytes } from "../engine/text";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -23,11 +24,16 @@ export class CString<
     this.encoding = encoding;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): string {
+  read(buffer: Uint8Array, offset: number, endian: Endian): string {
     return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: string, endian: Endian): void {
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: string,
+    endian: Endian
+  ): void {
     writeWith(this, buffer, offset, value, endian);
   }
 
@@ -45,18 +51,21 @@ export class CString<
         while (end < limit && u8[end] !== 0) {
           end++;
         }
-        return ctxBuffer(ctx).toString(encoding, at, end);
+        const buffer = ctxBuffer(ctx);
+        return buffer
+          ? buffer.toString(encoding, at, end)
+          : decodeBytes(u8, at, end, encoding);
       },
       write: (ctx, at, value) => {
         if (typeof value !== "string") {
           expected("string", value);
         }
         const buffer = ctxBuffer(ctx);
-        // Buffer#write truncates at `length` without splitting a character.
-        const written = buffer.write(value, at, length, encoding);
-        if (written < length) {
-          buffer.fill(0, at + written, at + length);
-        }
+        // Both paths truncate at `length` without splitting a character.
+        const written = buffer
+          ? buffer.write(value, at, length, encoding)
+          : encodeBytes(ctx.u8, at, length, value, encoding);
+        ctx.u8.fill(0, at + written, at + length);
       },
     };
   }

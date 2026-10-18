@@ -1,5 +1,16 @@
 import { type CFieldType, type Endian, isCFieldType } from "../field-type";
-import { type Ctx, checkRange, createCtx, ctxBuffer } from "./ctx";
+import {
+  type BytesLike,
+  type Ctx,
+  checkRange,
+  createCtx,
+  ctxBuffer,
+} from "./ctx";
+
+/** The bytes handed to custom types: a Buffer when the runtime has one. */
+function legacyBytes(ctx: Ctx): Buffer {
+  return (ctxBuffer(ctx) ?? ctx.u8) as Buffer;
+}
 
 /** The record being read or written around a field (used by discriminated unions). */
 export type Parent = Record<string, any>;
@@ -88,15 +99,15 @@ export function compileType(type: unknown, endian: Endian): Codec {
   if (isCFieldType(type)) {
     const custom: CFieldType<unknown> = type;
     return {
-      read: (ctx, at) => custom.read(ctxBuffer(ctx), at, endian),
+      read: (ctx, at) => custom.read(legacyBytes(ctx), at, endian),
       write: (ctx, at, value) =>
-        custom.write(ctxBuffer(ctx), at, value, endian),
+        custom.write(legacyBytes(ctx), at, value, endian),
     };
   }
   if (isStructLike(type)) {
     const nested = type;
     return {
-      read: (ctx, at) => nested.read(ctxBuffer(ctx), at, endian),
+      read: (ctx, at) => nested.read(legacyBytes(ctx), at, endian),
       write: (ctx, at, value) => {
         ctx.u8.set(nested.write(value, endian), at);
       },
@@ -108,13 +119,14 @@ export function compileType(type: unknown, endian: Endian): Codec {
 /** Public `read(buffer, offset, endian)` for built-in types. */
 export function readWith<T>(
   type: Compilable & { getSize(): number },
-  buffer: Uint8Array,
+  buffer: BytesLike,
   offset: number,
   endian: Endian,
   parent: Parent = NO_PARENT
 ): T {
-  checkRange(buffer, offset, type.getSize());
-  return ownCodec(type, endian).read(createCtx(buffer), offset, parent);
+  const ctx = createCtx(buffer);
+  checkRange(ctx.u8, offset, type.getSize());
+  return ownCodec(type, endian).read(ctx, offset, parent);
 }
 
 /** Public `write(buffer, offset, value, endian)` for built-in types. */
@@ -126,8 +138,9 @@ export function writeWith<T>(
   endian: Endian,
   parent: Parent = NO_PARENT
 ): void {
-  checkRange(buffer, offset, type.getSize());
-  ownCodec(type, endian).write(createCtx(buffer), offset, value, parent);
+  const ctx = createCtx(buffer);
+  checkRange(ctx.u8, offset, type.getSize());
+  ownCodec(type, endian).write(ctx, offset, value, parent);
 }
 
 export function describeValue(value: unknown): string {

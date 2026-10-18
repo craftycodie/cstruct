@@ -28,11 +28,11 @@ export class CMagicNumber<
     return this.type.getSize();
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): N {
+  read(buffer: Uint8Array, offset: number, endian: Endian): N {
     return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: N, endian: Endian): void {
+  write(buffer: Uint8Array, offset: number, value: N, endian: Endian): void {
     writeWith(this, buffer, offset, value, endian);
   }
 

@@ -4,6 +4,7 @@ import {
   isClassCtor,
   isClassInstance,
 } from "./class";
+import type { BytesLike } from "./engine/ctx";
 import { cImpl } from "./impl";
 
 export type Endian = cImpl.Endian;
@@ -24,29 +25,29 @@ function isEndian(value: unknown): value is Endian {
 
 export function read<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
-  buffer: Buffer,
+  buffer: BytesLike,
   offset?: number,
   endian?: Endian
 ): cImpl.StructSchemaToTS<F>;
 export function read<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
-  buffer: Buffer,
+  buffer: BytesLike,
   endian: Endian
 ): cImpl.StructSchemaToTS<F>;
 export function read<T extends object>(
   instance: T,
-  buffer: Buffer,
+  buffer: BytesLike,
   offset?: number,
   endian?: Endian
 ): T;
 export function read<T extends object>(
   instance: T,
-  buffer: Buffer,
+  buffer: BytesLike,
   endian: Endian
 ): T;
 export function read(
   target: unknown,
-  buffer: Buffer,
+  buffer: BytesLike,
   offsetOrEndian: number | Endian = 0,
   endian: Endian = "little"
 ): unknown {
