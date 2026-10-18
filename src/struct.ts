@@ -175,6 +175,8 @@ export class Struct<F extends StructFields = StructFields> {
   readonly shape: { readonly [K in keyof F]: F[K] };
   private readonly layout: Layout;
   private readonly byteSize: number;
+  /** For `@c.class()` layouts: reads construct instances of this class. */
+  private instanceCtor: (new () => object) | undefined;
 
   private constructor(fields: F, options?: StructOptions) {
     this.shape = fields;
@@ -259,7 +261,14 @@ export class Struct<F extends StructFields = StructFields> {
   }
 
   [COMPILE](env: CompileEnv): StructPlan {
-    return compileStruct(this.layout, env);
+    const ctor = this.instanceCtor;
+    return compileStruct(this.layout, env, ctor && (() => new ctor()));
+  }
+
+  /** @internal Make reads of this layout produce `ctor` instances. */
+  bindClass(ctor: new () => object): this {
+    this.instanceCtor = ctor;
+    return this;
   }
 
   /** @internal Read into `out` (a fresh record or a class instance). */

@@ -49,6 +49,12 @@ export function read<A extends CArray<any, any, any>>(
   offsetOrOptions?: ReadArg,
   endian?: Endian
 ): cImpl.infer<A>;
+export function read<C extends ClassCtor>(
+  ctor: C,
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
+  endian?: Endian
+): InstanceType<C>;
 export function read<T extends object>(
   instance: T,
   buffer: BytesLike,
@@ -74,6 +80,14 @@ export function read(
       resolved.offset
     );
   }
+  if (isClassCtor(target)) {
+    return (getClassStruct(target) as cImpl.Struct).readInto(
+      buffer,
+      resolved.offset,
+      resolved.endian,
+      new target()
+    );
+  }
   if (isClassInstance(target)) {
     return classStruct(target).readInto(
       buffer,
@@ -83,7 +97,7 @@ export function read(
     );
   }
   throw new Error(
-    "c.read() expects a c.struct schema, c.array(...) or @c.class() instance"
+    "c.read() expects a c.struct schema, c.array(...) or @c.class() class or instance"
   );
 }
 

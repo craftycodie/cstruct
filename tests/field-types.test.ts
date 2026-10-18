@@ -66,14 +66,42 @@ describe("@c.field property type enforcement", () => {
     expectTypeOf<GoodU64>().toMatchObjectType<{ test: bigint }>();
   });
 
-  it("documents decorator field types are not enforced on properties", () => {
+  it("rejects properties that cannot hold the decoded value", () => {
     @c.class()
     class BadU64 {
+      // @ts-expect-error u64 decodes to bigint, not string
       @c.field(c.u64())
       test!: string;
+
+      // @ts-expect-error Time64 decodes to Date
+      @c.field(c.Time64())
+      when!: number;
     }
 
-    expectTypeOf<BadU64>().toMatchObjectType<{ test: string }>();
+    expect(c.sizeof(BadU64)).toBe(16);
+  });
+
+  it("accepts wider property types than the decoded value", () => {
+    @c.class()
+    class Wide {
+      @c.field(c.MagicNumber(0xbeef, c.u16()))
+      magic!: number;
+
+      @c.field(c.u8(), { count: 4 })
+      rgba!: number[];
+
+      @c.field(c.u16())
+      maybe?: number;
+
+      @c.field(c.u32())
+      private hidden!: number;
+
+      reveal(): number {
+        return this.hidden;
+      }
+    }
+
+    expect(c.sizeof(Wide)).toBe(12);
   });
 
   it("accepts matching property types on decorated classes", () => {

@@ -71,7 +71,9 @@ export namespace cImpl {
   > = CArray<T, N>;
 }
 
-setStructFactory((fields) => cImpl.struct(fields));
+setStructFactory((fields, options, ctor) =>
+  cImpl.struct(fields, options).bindClass(ctor)
+);
 
 installChain(
   CFieldType.prototype,

@@ -70,16 +70,21 @@ export class StructPlan implements Codec<Parent> {
   readonly names: string[];
   readonly offsets: number[];
 
+  /** Creates the object a read fills: a class instance or a plain record. */
+  readonly create: () => object;
+
   constructor(
     names: string[],
     offsets: number[],
     codecs: Codec[],
-    defaults: readonly (readonly [string, () => unknown])[] = []
+    defaults: readonly (readonly [string, () => unknown])[] = [],
+    create: () => object = () => ({})
   ) {
     this.names = names;
     this.offsets = offsets;
     this.codecs = codecs;
     this.defaults = defaults;
+    this.create = create;
   }
 
   /**
@@ -100,7 +105,7 @@ export class StructPlan implements Codec<Parent> {
   }
 
   read(ctx: Ctx, at: number): Parent {
-    return this.readInto(ctx, at, {});
+    return this.readInto(ctx, at, this.create());
   }
 
   /** Read every field into `out` (a fresh record or a class instance). */
@@ -136,7 +141,11 @@ export class StructPlan implements Codec<Parent> {
  * Build the plan for a layout. Padding is skipped entirely: writes target
  * zero-filled memory, and reads leave padding out of the result.
  */
-export function compileStruct(layout: Layout, env: CompileEnv): StructPlan {
+export function compileStruct(
+  layout: Layout,
+  env: CompileEnv,
+  create?: () => object
+): StructPlan {
   const names: string[] = [];
   const offsets: number[] = [];
   const codecs: Codec[] = [];
@@ -165,5 +174,5 @@ export function compileStruct(layout: Layout, env: CompileEnv): StructPlan {
       )
     );
   }
-  return new StructPlan(names, offsets, codecs, defaults);
+  return new StructPlan(names, offsets, codecs, defaults, create);
 }
