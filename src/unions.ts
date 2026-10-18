@@ -1,3 +1,12 @@
+import {
+  COMPILE,
+  type Codec,
+  compileType,
+  NO_PARENT,
+  readWith,
+  writeWith,
+} from "./engine/codec";
+import { checkRange, createCtx } from "./engine/ctx";
 import type { FieldOptions, StructFieldType } from "./field";
 import { CFieldType, type Endian } from "./field-type";
 import type { cImpl as CTypes } from "./impl";
@@ -40,21 +49,7 @@ export class CUnion<
   ): {
     [K in keyof S]?: CTypes.infer<S[K]>;
   } {
-    const result: { [K in keyof S]?: CTypes.infer<S[K]> } = {};
-    for (let i = 0; i < this.memberNames.length; i++) {
-      const name = this.memberNames[i];
-      const struct = this.structs[i];
-      try {
-        result[name as keyof S] = struct.read(
-          buffer,
-          offset,
-          endian
-        ) as CTypes.infer<S[keyof S]>;
-      } catch {
-        result[name as keyof S] = undefined;
-      }
-    }
-    return result;
+    return readWith(this, buffer, offset, endian);
   }
 
   write(
@@ -63,18 +58,7 @@ export class CUnion<
     value: { [K in keyof S]?: CTypes.infer<S[K]> },
     endian: Endian
   ): void {
-    for (const name of this.memberNames) {
-      if (value[name] !== undefined) {
-        const struct = this.members[name];
-        const structBuffer = struct.write(
-          value[name] as Record<string, unknown>,
-          endian
-        );
-        structBuffer.copy(buffer, offset);
-        return;
-      }
-    }
-    throw new Error("No union member provided for write operation");
+    writeWith(this, buffer, offset, value, endian);
   }
 
   readMember<K extends keyof S>(
@@ -101,8 +85,43 @@ export class CUnion<
     if (!struct) {
       throw new Error(`Union member '${String(memberName)}' not found`);
     }
-    const structBuffer = struct.write(value as Record<string, unknown>, endian);
-    structBuffer.copy(buffer, offset);
+    checkRange(buffer, offset, struct.getSize());
+    compileType(struct, endian).write(
+      createCtx(buffer),
+      offset,
+      value,
+      NO_PARENT
+    );
+  }
+
+  [COMPILE](endian: Endian): Codec<Record<string, unknown>> {
+    const names = this.memberNames;
+    const codecs = this.structs.map((struct) => compileType(struct, endian));
+    return {
+      read: (ctx, at) => {
+        const out: Record<string, unknown> = {};
+        for (let i = 0; i < names.length; i++) {
+          try {
+            out[names[i]] = codecs[i].read(ctx, at, out);
+          } catch {
+            out[names[i]] = undefined;
+          }
+        }
+        return out;
+      },
+      write: (ctx, at, value) => {
+        if (value !== null && value !== undefined) {
+          for (let i = 0; i < names.length; i++) {
+            const member = value[names[i]];
+            if (member !== undefined) {
+              codecs[i].write(ctx, at, member, value);
+              return;
+            }
+          }
+        }
+        throw new Error("No union member provided for write operation");
+      },
+    };
   }
 }
 
@@ -225,15 +244,7 @@ export class CDiscriminatedUnion<
     endian: Endian,
     parent: Record<string, unknown>
   ): UnionOfArms<Arms> | null {
-    const index = this.select(parent);
-    if (index === null) {
-      return null;
-    }
-    return this.armStructs[index].read(
-      buffer,
-      offset,
-      endian
-    ) as UnionOfArms<Arms>;
+    return readWith(this, buffer, offset, endian, parent);
   }
 
   write(
@@ -243,26 +254,34 @@ export class CDiscriminatedUnion<
     endian: Endian,
     parent: Record<string, unknown>
   ): void {
-    if (value === null || value === undefined) {
-      buffer.fill(0, offset, offset + this.size);
-      return;
-    }
+    writeWith(this, buffer, offset, value, endian, parent);
+  }
 
-    const index = this.select(parent);
-    if (index === null) {
-      throw new Error(
-        "discriminatedUnion: no arm matches parent discriminant for write"
-      );
-    }
-
-    const armBuffer = this.armStructs[index].write(
-      value as Record<string, unknown>,
-      endian
-    );
-    armBuffer.copy(buffer, offset);
-    if (armBuffer.length < this.size) {
-      buffer.fill(0, offset + armBuffer.length, offset + this.size);
-    }
+  [COMPILE](endian: Endian): Codec<UnionOfArms<Arms> | null | undefined> {
+    const select = this.select;
+    const size = this.size;
+    const arms = this.armStructs.map((struct) => compileType(struct, endian));
+    const armSizes = this.armStructs.map((struct) => struct.getSize());
+    return {
+      read: (ctx, at, parent) => {
+        const index = select(parent);
+        return index === null ? null : arms[index].read(ctx, at, parent);
+      },
+      write: (ctx, at, value, parent) => {
+        if (value === null || value === undefined) {
+          ctx.u8.fill(0, at, at + size);
+          return;
+        }
+        const index = select(parent);
+        if (index === null) {
+          throw new Error(
+            "discriminatedUnion: no arm matches parent discriminant for write"
+          );
+        }
+        arms[index].write(ctx, at, value, parent);
+        ctx.u8.fill(0, at + armSizes[index], at + size);
+      },
+    };
   }
 }
 

@@ -1,3 +1,4 @@
+import { COMPILE, type Codec } from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -28,6 +29,16 @@ export class CPadding<const O extends FieldOptions = {}> extends CFieldType<
     _endian: Endian
   ): void {
     buffer.fill(0, offset, offset + this.bytes);
+  }
+
+  [COMPILE](_endian: Endian): Codec<undefined> {
+    const bytes = this.bytes;
+    return {
+      read: () => undefined,
+      write: (ctx, at) => {
+        ctx.u8.fill(0, at, at + bytes);
+      },
+    };
   }
 }
 

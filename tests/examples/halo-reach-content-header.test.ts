@@ -39,4 +39,11 @@ describe("chdr.bin fixture", () => {
     expect(chunk.metadata.file_type_data).toEqual({ icon_index: 2 });
     expect(chunk.metadata.activity_data).toEqual({ hopper_identifier: 0 });
   });
+
+  it("writes the CHDR chunk back byte for byte", () => {
+    const chunk = c.read(BlfChunkContentHeader, bytes, "big");
+    const written = c.write(BlfChunkContentHeader, chunk, "big");
+    // The fixture carries 16 bytes past the end of the struct.
+    expect(written.equals(bytes.subarray(0, written.length))).toBe(true);
+  });
 });

@@ -18,7 +18,7 @@ const ContentItemMatchmakingMetadata = c.struct({
 const ContentItemHistory = c.struct({
   timestamp: c.Time64(),
   xuid: c.u64(),
-  name: c.String(16),
+  name: c.String(16, "latin1"),
   is_online: c.u8({ padAfter: 3 }),
 });
 

@@ -1,6 +1,5 @@
 import {
   type ClassCtor,
-  getClassFieldNames,
   getClassStruct,
   isClassCtor,
   isClassInstance,
@@ -15,14 +14,8 @@ export function isStructSchema(
   return value instanceof cImpl.Struct;
 }
 
-function classInstanceToRecord(instance: object): Record<string, unknown> {
-  const ctor = instance.constructor as ClassCtor;
-  const names = getClassFieldNames(ctor);
-  const data: Record<string, unknown> = {};
-  for (const name of names) {
-    data[name] = (instance as Record<string, unknown>)[name];
-  }
-  return data;
+function classStruct(instance: object): cImpl.Struct {
+  return getClassStruct(instance.constructor as ClassCtor) as cImpl.Struct;
 }
 
 function isEndian(value: unknown): value is Endian {
@@ -64,12 +57,7 @@ export function read(
     return target.read(buffer, offset, resolvedEndian);
   }
   if (isClassInstance(target)) {
-    const data = getClassStruct(target.constructor as ClassCtor).read(
-      buffer,
-      offset,
-      resolvedEndian
-    );
-    return Object.assign(target, data);
+    return classStruct(target).readInto(buffer, offset, resolvedEndian, target);
   }
   throw new Error("c.read() expects a c.struct schema or @c.class() instance");
 }
@@ -90,10 +78,7 @@ export function write(target: unknown, arg2?: unknown, arg3?: Endian): Buffer {
   }
   if (isClassInstance(target)) {
     const endian = arg2 === "little" || arg2 === "big" ? arg2 : "little";
-    return getClassStruct(target.constructor as ClassCtor).write(
-      classInstanceToRecord(target),
-      endian
-    );
+    return classStruct(target).write(target as Record<string, unknown>, endian);
   }
   throw new Error("c.write() expects a c.struct schema or @c.class() instance");
 }

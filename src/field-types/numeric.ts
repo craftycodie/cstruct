@@ -1,34 +1,20 @@
-import { CBigint, readBigintValue, writeBigintValue } from "./bigint";
-import { type CNumber, readNumberValue, writeNumberValue } from "./number";
+import type { Codec } from "../engine/codec";
+import type { Endian } from "../field-type";
+import { bigintCodec, CBigint } from "./bigint";
+import { type CNumber, numberCodec } from "./number";
 
 export type CNumeric = CNumber | CBigint;
 
-export function getNumericTypeSize(type: CNumeric): number {
-  return type.getSize();
+/** Codec for the storage type behind enums, bitfields and magic numbers. */
+export function numericCodec(
+  type: CNumeric,
+  endian: Endian
+): Codec<number | bigint> {
+  return type instanceof CBigint
+    ? bigintCodec(type.kind, endian)
+    : numberCodec(type.kind, endian);
 }
 
-export function readNumericValue(
-  view: DataView,
-  offset: number,
-  type: CNumeric,
-  littleEndian = true
-): number | bigint {
-  if (type instanceof CBigint) {
-    return readBigintValue(view, offset, type, littleEndian);
-  }
-  return readNumberValue(view, offset, type, littleEndian);
-}
-
-export function writeNumericValue(
-  view: DataView,
-  offset: number,
-  type: CNumeric,
-  value: number | bigint,
-  littleEndian = true
-): void {
-  if (type instanceof CBigint) {
-    writeBigintValue(view, offset, type, value as bigint, littleEndian);
-    return;
-  }
-  writeNumberValue(view, offset, type, value as number, littleEndian);
+export function isSignedNumeric(type: CNumeric): boolean {
+  return type.kind.startsWith("i");
 }

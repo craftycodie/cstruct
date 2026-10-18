@@ -1,3 +1,10 @@
+import {
+  COMPILE,
+  type Codec,
+  expectNumber,
+  readWith,
+  writeWith,
+} from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -24,6 +31,102 @@ const NUMBER_TYPE_SIZES: Record<NumberKind, number> = {
   f64: 8,
 };
 
+type NumberCodec = Codec<number>;
+
+const U8: NumberCodec = {
+  read: (ctx, at) => ctx.u8[at],
+  write: (ctx, at, value) => {
+    ctx.u8[at] = expectNumber(value);
+  },
+};
+
+const I8: NumberCodec = {
+  read: (ctx, at) => (ctx.u8[at] << 24) >> 24,
+  write: (ctx, at, value) => {
+    ctx.u8[at] = expectNumber(value);
+  },
+};
+
+/** [little-endian, big-endian] codec per kind. */
+const NUMBER_CODECS: Record<NumberKind, readonly [NumberCodec, NumberCodec]> = {
+  u8: [U8, U8],
+  i8: [I8, I8],
+  u16: [
+    {
+      read: (ctx, at) => ctx.dv.getUint16(at, true),
+      write: (ctx, at, value) =>
+        ctx.dv.setUint16(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getUint16(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setUint16(at, expectNumber(value), false),
+    },
+  ],
+  i16: [
+    {
+      read: (ctx, at) => ctx.dv.getInt16(at, true),
+      write: (ctx, at, value) => ctx.dv.setInt16(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getInt16(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setInt16(at, expectNumber(value), false),
+    },
+  ],
+  u32: [
+    {
+      read: (ctx, at) => ctx.dv.getUint32(at, true),
+      write: (ctx, at, value) =>
+        ctx.dv.setUint32(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getUint32(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setUint32(at, expectNumber(value), false),
+    },
+  ],
+  i32: [
+    {
+      read: (ctx, at) => ctx.dv.getInt32(at, true),
+      write: (ctx, at, value) => ctx.dv.setInt32(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getInt32(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setInt32(at, expectNumber(value), false),
+    },
+  ],
+  f32: [
+    {
+      read: (ctx, at) => ctx.dv.getFloat32(at, true),
+      write: (ctx, at, value) =>
+        ctx.dv.setFloat32(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getFloat32(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setFloat32(at, expectNumber(value), false),
+    },
+  ],
+  f64: [
+    {
+      read: (ctx, at) => ctx.dv.getFloat64(at, true),
+      write: (ctx, at, value) =>
+        ctx.dv.setFloat64(at, expectNumber(value), true),
+    },
+    {
+      read: (ctx, at) => ctx.dv.getFloat64(at, false),
+      write: (ctx, at, value) =>
+        ctx.dv.setFloat64(at, expectNumber(value), false),
+    },
+  ],
+};
+
+export function numberCodec(kind: NumberKind, endian: Endian): NumberCodec {
+  return NUMBER_CODECS[kind][endian === "big" ? 1 : 0];
+}
+
 export class CNumber<
   K extends NumberKind = NumberKind,
   const O extends FieldOptions = {},
@@ -40,17 +143,7 @@ export class CNumber<
   }
 
   read(buffer: Buffer, offset: number, endian: Endian): NumberTypeToTS<K> {
-    const view = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength
-    );
-    return readNumberValue(
-      view,
-      offset,
-      this,
-      endian === "little"
-    ) as NumberTypeToTS<K>;
+    return readWith(this, buffer, offset, endian);
   }
 
   write(
@@ -59,12 +152,11 @@ export class CNumber<
     value: NumberTypeToTS<K>,
     endian: Endian
   ): void {
-    const view = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength
-    );
-    writeNumberValue(view, offset, this, value, endian === "little");
+    writeWith(this, buffer, offset, value, endian);
+  }
+
+  [COMPILE](endian: Endian): NumberCodec {
+    return numberCodec(this.kind, endian);
   }
 }
 
@@ -84,72 +176,3 @@ export const f32 = <const O extends FieldOptions = {}>(options?: O) =>
   new CNumber("f32", options);
 export const f64 = <const O extends FieldOptions = {}>(options?: O) =>
   new CNumber("f64", options);
-
-export function getNumberTypeSize(type: CNumber): number {
-  return type.getSize();
-}
-
-export function readNumberValue(
-  view: DataView,
-  offset: number,
-  type: CNumber,
-  littleEndian = true
-): number {
-  switch (type.kind) {
-    case "u8":
-      return view.getUint8(offset);
-    case "u16":
-      return view.getUint16(offset, littleEndian);
-    case "u32":
-      return view.getUint32(offset, littleEndian);
-    case "i8":
-      return view.getInt8(offset);
-    case "i16":
-      return view.getInt16(offset, littleEndian);
-    case "i32":
-      return view.getInt32(offset, littleEndian);
-    case "f32":
-      return view.getFloat32(offset, littleEndian);
-    case "f64":
-      return view.getFloat64(offset, littleEndian);
-    default:
-      throw new Error(`Unsupported number kind: ${type.kind}`);
-  }
-}
-
-export function writeNumberValue(
-  view: DataView,
-  offset: number,
-  type: CNumber,
-  value: number,
-  littleEndian = true
-): void {
-  switch (type.kind) {
-    case "u8":
-      view.setUint8(offset, value);
-      break;
-    case "u16":
-      view.setUint16(offset, value, littleEndian);
-      break;
-    case "u32":
-      view.setUint32(offset, value, littleEndian);
-      break;
-    case "i8":
-      view.setInt8(offset, value);
-      break;
-    case "i16":
-      view.setInt16(offset, value, littleEndian);
-      break;
-    case "i32":
-      view.setInt32(offset, value, littleEndian);
-      break;
-    case "f32":
-      view.setFloat32(offset, value, littleEndian);
-      break;
-    case "f64":
-      view.setFloat64(offset, value, littleEndian);
-      break;
-    default:
-      throw new Error(`Unsupported number kind: ${type.kind}`);
-  }
-}

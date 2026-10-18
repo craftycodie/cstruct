@@ -1,29 +1,24 @@
-import { isCArray, unwrapArrayElement } from "./array";
+import { COMPILE, ownCodec } from "./engine/codec";
+import { checkRange, createCtx } from "./engine/ctx";
+import { compileStruct, type StructPlan } from "./engine/plan";
+import { asCStructError } from "./errors";
 import {
   CStructField,
   type FieldType,
-  getFieldOptions,
   type FieldOptions as IFieldOptions,
   type StructFieldValue,
-  unwrapFieldType,
 } from "./field";
 import type { Endian as EndianType } from "./field-type";
-import {
-  type BigintTypeToTS,
-  type CBigint,
-  type CFieldType,
-  type CNumber,
-  type CPadding,
-  createPadding,
-  isCFieldType,
-  isCPadding,
-  type NumberTypeToTS,
+import type {
+  BigintTypeToTS,
+  CBigint,
+  CFieldType,
+  CNumber,
+  CPadding,
+  NumberTypeToTS,
 } from "./field-types";
-import {
-  type CDiscriminatedUnion,
-  isCDiscriminatedUnion,
-  type UnionOfArms,
-} from "./unions";
+import { computeLayout, type Layout } from "./layout";
+import type { CDiscriminatedUnion, UnionOfArms } from "./unions";
 import type { FlattenIntersection, Tuple, UnionToIntersection } from "./utils";
 
 export type StructFields = Record<string, StructFieldValue>;
@@ -95,42 +90,13 @@ export interface StructField {
   type: FieldType;
 }
 
-function normalizeFields(fields: StructFields): StructField[] {
-  const result: StructField[] = [];
-  for (const [name, value] of Object.entries(fields)) {
-    const fieldOptions = getFieldOptions(value);
-    if (fieldOptions.padBefore) {
-      result.push({
-        name: `__pad_before_${name}`,
-        type: createPadding(fieldOptions.padBefore),
-      });
-    }
-    if (isCArray(value)) {
-      result.push({
-        name,
-        type: unwrapArrayElement(value.element),
-        count: value.count,
-      });
-    } else {
-      result.push({ name, type: unwrapFieldType(value) });
-    }
-    if (fieldOptions.padAfter) {
-      result.push({
-        name: `__pad_after_${name}`,
-        type: createPadding(fieldOptions.padAfter),
-      });
-    }
-  }
-  return result;
-}
-
 export class Struct<F extends StructFields = StructFields> {
-  private readonly fields: readonly StructField[];
+  private readonly layout: Layout;
   private readonly size: number;
 
   private constructor(fields: F) {
-    this.fields = normalizeFields(fields);
-    this.size = this.calculateSize();
+    this.layout = computeLayout(fields);
+    this.size = this.layout.size;
   }
 
   static struct<const F extends StructFields>(fields: F): Struct<F> {
@@ -143,27 +109,29 @@ export class Struct<F extends StructFields = StructFields> {
     return new CStructField(this, options);
   }
 
-  private getFieldSize(field: StructField): number {
-    if (isCDiscriminatedUnion(field.type)) {
-      return field.type.getSize();
-    }
-    if (field.type instanceof Struct) {
-      return field.type.size;
-    }
-    if (isCFieldType(field.type)) {
-      return field.type.getSize();
-    }
-    throw new Error(`Unsupported field type for '${field.name}'`);
+  /** @internal Compiled plan for this layout at one endianness. */
+  plan(endian: EndianType): StructPlan {
+    return ownCodec(this, endian) as StructPlan;
   }
 
-  private calculateSize(): number {
-    let totalSize = 0;
-    for (const field of this.fields) {
-      const fieldSize = this.getFieldSize(field);
-      const count = field.count ?? 1;
-      totalSize += fieldSize * count;
+  [COMPILE](endian: EndianType): StructPlan {
+    return compileStruct(this.layout, endian);
+  }
+
+  /** @internal Read into `out` (a fresh record or a class instance). */
+  readInto<T extends object>(
+    buffer: Uint8Array,
+    offset: number,
+    endian: EndianType,
+    out: T
+  ): T {
+    const plan = this.plan(endian);
+    try {
+      checkRange(buffer, offset, this.size);
+      return plan.readInto(createCtx(buffer), offset, out);
+    } catch (error) {
+      throw asCStructError(error, "read");
     }
-    return totalSize;
   }
 
   read(
@@ -171,174 +139,17 @@ export class Struct<F extends StructFields = StructFields> {
     offset = 0,
     endian: EndianType = "little"
   ): StructSchemaToTS<F> {
-    const result: any = {};
-    let currentOffset = 0;
-
-    for (const field of this.fields) {
-      if (isCDiscriminatedUnion(field.type)) {
-        result[field.name] = field.type.read(
-          buffer,
-          offset + currentOffset,
-          endian,
-          result
-        );
-        currentOffset += field.type.getSize();
-        continue;
-      }
-
-      if (field.type instanceof Struct) {
-        const nestedStruct = field.type;
-        const count = field.count ?? 1;
-
-        // `count` is only set for `c.array(...)` / `{ count }`; omit means a single value.
-        if (field.count === undefined) {
-          result[field.name] = nestedStruct.read(
-            buffer,
-            offset + currentOffset,
-            endian
-          );
-          currentOffset += nestedStruct.size;
-        } else {
-          result[field.name] = [];
-          for (let i = 0; i < count; i++) {
-            result[field.name].push(
-              nestedStruct.read(buffer, offset + currentOffset, endian)
-            );
-            currentOffset += nestedStruct.size;
-          }
-        }
-        continue;
-      }
-
-      if (isCFieldType(field.type)) {
-        const dataField = field.type;
-        const count = field.count ?? 1;
-
-        if (isCPadding(dataField)) {
-          currentOffset += dataField.getSize() * count;
-          continue;
-        }
-
-        if (field.count === undefined) {
-          result[field.name] = dataField.read(
-            buffer,
-            offset + currentOffset,
-            endian
-          );
-          currentOffset += dataField.getSize();
-        } else {
-          result[field.name] = [];
-          for (let i = 0; i < count; i++) {
-            result[field.name].push(
-              dataField.read(buffer, offset + currentOffset, endian)
-            );
-            currentOffset += dataField.getSize();
-          }
-        }
-        continue;
-      }
-
-      throw new Error(`Unsupported field type for '${field.name}'`);
-    }
-
-    return result;
+    return this.readInto(buffer, offset, endian, {}) as StructSchemaToTS<F>;
   }
 
   write(data: Record<string, any>, endian: EndianType = "little"): Buffer {
     const buffer = Buffer.alloc(this.size);
-    let currentOffset = 0;
-
-    for (const field of this.fields) {
-      try {
-        if (isCDiscriminatedUnion(field.type)) {
-          field.type.write(
-            buffer,
-            currentOffset,
-            data[field.name],
-            endian,
-            data
-          );
-          currentOffset += field.type.getSize();
-          continue;
-        }
-
-        if (field.type instanceof Struct) {
-          const nestedStruct = field.type;
-          const count = field.count ?? 1;
-          const value = data[field.name];
-
-          if (field.count === undefined) {
-            if (value === undefined || value === null) {
-              throw new Error(`Field '${field.name}' is ${value}`);
-            }
-            const nestedBuffer = nestedStruct.write(value, endian);
-            nestedBuffer.copy(buffer, currentOffset);
-            currentOffset += nestedStruct.size;
-          } else {
-            if (!Array.isArray(value)) {
-              throw new Error(
-                `Expected array for field '${field.name}' with count ${count}`
-              );
-            }
-            if (value.length < count) {
-              throw new Error(
-                `Field '${field.name}' expected ${count} elements but got ${value.length}`
-              );
-            }
-            for (let i = 0; i < count; i++) {
-              if (value[i] === undefined) {
-                throw new Error(`Field '${field.name}[${i}]' is undefined`);
-              }
-              const nestedBuffer = nestedStruct.write(value[i], endian);
-              nestedBuffer.copy(buffer, currentOffset);
-              currentOffset += nestedStruct.size;
-            }
-          }
-          continue;
-        }
-
-        if (isCFieldType(field.type)) {
-          const dataField = field.type;
-          const count = field.count ?? 1;
-
-          if (isCPadding(dataField)) {
-            for (let i = 0; i < count; i++) {
-              dataField.write(buffer, currentOffset, undefined, endian);
-              currentOffset += dataField.getSize();
-            }
-            continue;
-          }
-
-          const value = data[field.name];
-
-          if (field.count === undefined) {
-            dataField.write(buffer, currentOffset, value, endian);
-            currentOffset += dataField.getSize();
-          } else {
-            if (!Array.isArray(value)) {
-              throw new Error(
-                `Expected array for field '${field.name}' with count ${count}`
-              );
-            }
-            if (value.length < count) {
-              throw new Error(
-                `Field '${field.name}' expected ${count} elements but got ${value.length}`
-              );
-            }
-            for (let i = 0; i < count; i++) {
-              dataField.write(buffer, currentOffset, value[i], endian);
-              currentOffset += dataField.getSize();
-            }
-          }
-          continue;
-        }
-
-        throw new Error(`Unsupported field type for '${field.name}'`);
-      } catch (error) {
-        throw new Error(`${field.name}: ${error}`);
-      }
+    const plan = this.plan(endian);
+    try {
+      plan.write(createCtx(buffer), 0, data);
+    } catch (error) {
+      throw asCStructError(error, "write");
     }
-
     return buffer;
   }
 
