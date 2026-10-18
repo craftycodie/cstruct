@@ -1,4 +1,4 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { c } from "../src/index";
 
 const SkullFlags = ["iron", "mythic"] as const;
