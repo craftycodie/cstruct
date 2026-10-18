@@ -18,7 +18,7 @@ const ContentItemMatchmakingMetadata = c.struct({
 const ContentItemHistory = c.struct({
   timestamp: c.Time64(),
   xuid: c.u64(),
-  name: c.String(16, "latin1"),
+  name: c.string(16, "latin1"),
   is_online: c.u8({ padAfter: 3 }),
 });
 
@@ -44,37 +44,20 @@ const ContentItemMetadata = c.struct({
   display: ContentItemDisplayMetadata,
   creation_history: ContentItemHistory,
   modification_history: ContentItemHistory,
-  name: c.WString(0x80),
-  description: c.WString(0x80),
-  file_type_data: c.discriminatedUnion(
-    { size: 16 },
-    c.when(
-      3,
-      ContentItemFilmMetadata,
-      (m) => (m as { general: { file_type: number } }).general.file_type
-    ),
-    c.when(
-      4,
-      ContentItemFilmMetadata,
-      (m) => (m as { general: { file_type: number } }).general.file_type
-    ),
-    c.when(
-      6,
-      ContentItemGameVariantMetadata,
-      (m) => (m as { general: { file_type: number } }).general.file_type
-    )
-  ),
-  activity_data: c.discriminatedUnion(
-    { size: 16 },
-    c.arm(
-      ContentItemMatchmakingMetadata,
-      (m) => (m as { general: { activity: number } }).general.activity === 3
-    )
-  ),
+  name: c.wstring(0x80),
+  description: c.wstring(0x80),
+  file_type_data: c.match("general.file_type", {
+    3: ContentItemFilmMetadata,
+    4: ContentItemFilmMetadata,
+    6: ContentItemGameVariantMetadata,
+  }),
+  activity_data: c.match("general.activity", {
+    3: ContentItemMatchmakingMetadata,
+  }),
 });
 
 export const BlfChunkContentHeader = c.struct({
-  signature: c.String(4),
+  signature: c.string(4),
   chunk_length: c.u32(),
   major: c.u16(),
   minor: c.u16(),

@@ -94,12 +94,12 @@ export function read(
  */
 export function write<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
-  data: cImpl.StructSchemaToTS<F>,
+  data: cImpl.input<cImpl.Struct<F>>,
   endianOrOptions?: WriteArg
 ): Buffer;
 export function write<A extends CArray<any, any, any>>(
   array: A,
-  data: cImpl.infer<A>,
+  data: cImpl.input<A>,
   endianOrOptions?: WriteArg
 ): Buffer;
 export function write<T extends object>(
@@ -116,8 +116,8 @@ export function write(
       throw new Error("c.write(schema, data) requires a data object");
     }
     if (isStructSchema(target)) {
-      return target.write(
-        arg2 as Record<string, unknown>,
+      return (target as cImpl.Struct).write(
+        arg2 as Record<string, any>,
         arg3 as WriteOptions
       );
     }
@@ -131,7 +131,7 @@ export function write(
   }
   if (isClassInstance(target)) {
     return classStruct(target).write(
-      target as Record<string, unknown>,
+      target as Record<string, any>,
       arg2 as WriteOptions
     );
   }

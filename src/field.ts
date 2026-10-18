@@ -1,4 +1,5 @@
 import type { CArray } from "./array";
+import type { Chainable } from "./chain";
 import type { CFieldType, Endian } from "./field-type";
 import type { CDiscriminatedUnion } from "./unions";
 
@@ -23,6 +24,11 @@ export type FieldType =
   | StructFieldType
   | CDiscriminatedUnion;
 
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CStructField<S, O extends FieldOptions = {}>
+  extends Chainable {}
+
 export class CStructField<S, const O extends FieldOptions = {}> {
   readonly __cstructField = true as const;
   readonly struct: S;
@@ -45,8 +51,15 @@ export function isCStructField(
   );
 }
 
-export class CClassField<S, const O extends FieldOptions = {}> {
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CClassField<S, O extends FieldOptions = {}, I = unknown>
+  extends Chainable {}
+
+/** A `@c.class()` type embedded as a field; `I` is the class's instance type. */
+export class CClassField<S, const O extends FieldOptions = {}, I = unknown> {
   readonly __cclassField = true as const;
+  /** Type-only: the decorated class's instance type. */
+  declare readonly __instance?: I;
   readonly struct: S;
   readonly options: O;
 
@@ -64,6 +77,13 @@ export function isCClassField(value: unknown): value is CClassField<any, any> {
     (value as CClassField<any>).__cclassField === true
   );
 }
+
+// biome-ignore-start lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CAnnotatedField<
+  T extends StructFieldValue = StructFieldValue,
+  O extends FieldOptions = {},
+> extends Chainable {}
+// biome-ignore-end lint/correctness/noUnusedVariables: type parameters must match the class they merge into
 
 export class CAnnotatedField<
   T extends StructFieldValue = StructFieldValue,

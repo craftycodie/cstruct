@@ -189,7 +189,7 @@ export function classImpl(): ClassDecorator;
 export function classImpl<C extends ClassCtor>(
   ctor: C,
   options?: FieldOptions
-): CClassField<StructLike, FieldOptions>;
+): CClassField<StructLike, FieldOptions, InstanceType<C>>;
 export function classImpl(ctorOrVoid?: ClassCtor, options?: FieldOptions) {
   if (ctorOrVoid === undefined) {
     return ((target: Function) => {

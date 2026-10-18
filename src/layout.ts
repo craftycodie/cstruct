@@ -21,6 +21,12 @@ export interface LayoutField {
   readonly offset: number;
   readonly size: number;
   readonly type: FieldType;
+  /**
+   * Options of a wrapper around the field type (`c.array(...)`,
+   * `struct.field(...)`, ...), whose defaults and assertions apply to the
+   * whole field. The field type's own options are applied by the compiler.
+   */
+  readonly wrapperOptions: object | undefined;
 }
 
 export interface Layout {
@@ -62,6 +68,7 @@ interface NormalizedField {
   endian?: Endian;
   name: string;
   type: FieldType;
+  wrapperOptions?: object;
 }
 
 function normalizeFields(
@@ -83,9 +90,16 @@ function normalizeFields(
         type: unwrapArrayElement(value.element),
         count: value.count,
         endian,
+        wrapperOptions: value.options,
       });
     } else {
-      result.push({ name, type: unwrapFieldType(value), endian });
+      const type = unwrapFieldType(value);
+      result.push({
+        name,
+        type,
+        endian,
+        wrapperOptions: type === value ? undefined : fieldOptions,
+      });
     }
     if (fieldOptions.padAfter) {
       result.push({
@@ -132,6 +146,7 @@ export function computeLayout(
       type: field.type,
       count: field.count,
       endian: field.endian,
+      wrapperOptions: field.wrapperOptions,
       offset,
       elementSize,
       size,

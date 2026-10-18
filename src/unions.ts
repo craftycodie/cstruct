@@ -1,3 +1,4 @@
+import type { Chainable } from "./chain";
 import {
   COMPILE,
   type Codec,
@@ -201,6 +202,14 @@ function buildSelect(
 }
 
 /** Discriminated union slot: one active arm selected from parent fields, or null. */
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore-start lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CDiscriminatedUnion<
+  Arms extends readonly UnionArmInput[] = readonly UnionArmInput[],
+  O extends FieldOptions = {},
+> extends Chainable {}
+// biome-ignore-end lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+
 export class CDiscriminatedUnion<
   const Arms extends readonly UnionArmInput[] = readonly UnionArmInput[],
   const O extends FieldOptions = {},

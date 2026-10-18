@@ -1,9 +1,12 @@
 import { classImpl, fieldImpl } from "./class";
+import { enumField } from "./factories";
 import type { FieldType } from "./field";
 import { cImpl } from "./impl";
 import { offsetof, read, sizeof, write } from "./io";
 
 export const c = Object.assign(cImpl, {
+  /** C enum stored as a numeric type; decodes to the key names. */
+  enum: enumField,
   field: fieldImpl,
   class: classImpl,
   read,
@@ -21,6 +24,10 @@ export namespace c {
   export type StructSchemaToTS<F extends StructFields> =
     cImpl.StructSchemaToTS<F>;
   export type infer<T> = cImpl.infer<T>;
+  /** Accepted write type: padding omitted; magic, unions and defaults optional. */
+  export type input<T> = cImpl.input<T>;
+  /** Decoded read type (same as `c.infer`). */
+  export type output<T> = cImpl.output<T>;
   export type Array<
     T extends FieldType = FieldType,
     N extends number = number,

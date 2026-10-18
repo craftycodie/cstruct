@@ -1,4 +1,5 @@
 import { type CFieldType, type Endian, isCFieldType } from "../field-type";
+import { applyModifiers } from "../modifiers";
 import {
   type BytesLike,
   type Ctx,
@@ -118,8 +119,18 @@ function isStructLike(value: unknown): value is StructLikeType {
   );
 }
 
-/** Codec for any field type: the fast path when available, else its public methods. */
+/**
+ * Codec for any field type: the fast path when available, else its public
+ * methods. Defaults and assertions from the type's options wrap the result.
+ */
 export function compileType(type: unknown, env: CompileEnv): Codec {
+  return applyModifiers(
+    baseCodec(type, env),
+    (type as { options?: unknown } | null)?.options
+  );
+}
+
+function baseCodec(type: unknown, env: CompileEnv): Codec {
   if (hasTrustedHook(type)) {
     return ownCodec(type, env);
   }

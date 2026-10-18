@@ -8,6 +8,7 @@ import {
 } from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
+import { MAGIC_VALUE } from "../modifiers";
 import { CBigint } from "./bigint";
 import { type CNumeric, numericCodec } from "./numeric";
 
@@ -23,6 +24,10 @@ export class CMagicNumber<
     super(options);
     this.magic = magic;
     this.type = type;
+  }
+
+  get [MAGIC_VALUE](): N {
+    return this.magic;
   }
 
   getSize(): number {

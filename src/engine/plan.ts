@@ -1,6 +1,7 @@
 import { withPath } from "../errors";
 import { isCPadding } from "../field-types/padding";
 import type { Layout } from "../layout";
+import { applyModifiers, defaultGetter } from "../modifiers";
 import {
   type Codec,
   type CompileEnv,
@@ -64,13 +65,38 @@ export class ArrayCodec implements Codec<unknown[]> {
 /** Compiled reader/writer for one struct layout at one endianness. */
 export class StructPlan implements Codec<Parent> {
   readonly codecs: Codec[];
+  /** Fields with a value to use when omitted on write. */
+  readonly defaults: readonly (readonly [string, () => unknown])[];
   readonly names: string[];
   readonly offsets: number[];
 
-  constructor(names: string[], offsets: number[], codecs: Codec[]) {
+  constructor(
+    names: string[],
+    offsets: number[],
+    codecs: Codec[],
+    defaults: readonly (readonly [string, () => unknown])[] = []
+  ) {
     this.names = names;
     this.offsets = offsets;
     this.codecs = codecs;
+    this.defaults = defaults;
+  }
+
+  /**
+   * The record to write: `value` itself, or a shallow copy with omitted
+   * defaults and magic constants filled in, so discriminants can see them.
+   */
+  private effective(value: Parent): Parent {
+    let record = value;
+    for (const [name, get] of this.defaults) {
+      if (record[name] === undefined) {
+        if (record === value) {
+          record = { ...value };
+        }
+        record[name] = get();
+      }
+    }
+    return record;
   }
 
   read(ctx: Ctx, at: number): Parent {
@@ -93,7 +119,7 @@ export class StructPlan implements Codec<Parent> {
   }
 
   write(ctx: Ctx, at: number, value: Parent): void {
-    const record = expectObject(value);
+    const record = this.effective(expectObject(value));
     const { names, offsets, codecs } = this;
     let i = 0;
     try {
@@ -114,19 +140,30 @@ export function compileStruct(layout: Layout, env: CompileEnv): StructPlan {
   const names: string[] = [];
   const offsets: number[] = [];
   const codecs: Codec[] = [];
+  const defaults: [string, () => unknown][] = [];
   for (const field of layout.fields) {
     if (isCPadding(field.type)) {
       continue;
+    }
+    const getDefault =
+      field.count === undefined
+        ? defaultGetter(field.type, field.wrapperOptions)
+        : defaultGetter(undefined, field.wrapperOptions);
+    if (getDefault) {
+      defaults.push([field.name, getDefault]);
     }
     const fieldEnv = field.endian ? envFor(field.endian, env.checked) : env;
     const element = compileType(field.type, fieldEnv);
     names.push(field.name);
     offsets.push(field.offset);
     codecs.push(
-      field.count === undefined
-        ? element
-        : new ArrayCodec(element, field.count, field.elementSize)
+      applyModifiers(
+        field.count === undefined
+          ? element
+          : new ArrayCodec(element, field.count, field.elementSize),
+        field.wrapperOptions
+      )
     );
   }
-  return new StructPlan(names, offsets, codecs);
+  return new StructPlan(names, offsets, codecs, defaults);
 }

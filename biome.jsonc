@@ -23,7 +23,10 @@
           "suspicious": {
             "noExplicitAny": "off",
             "noBitwiseOperators": "off",
-            "noShadowRestrictedNames": "off"
+            "noShadowRestrictedNames": "off",
+            // Chain methods are typed by merging an interface into each class
+            // and installed on the prototypes at startup (src/chain.ts).
+            "noUnsafeDeclarationMerging": "off"
           },
           "style": {
             "noNamespace": "off",

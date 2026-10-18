@@ -28,4 +28,5 @@ export {
   isCFieldType,
 } from "./field-types";
 export { time64_t } from "./field-types/time";
+export { CMatch, type MatchArms, type MatchOptions } from "./match";
 export { FlattenIntersection, Tuple, UnionToIntersection } from "./utils";

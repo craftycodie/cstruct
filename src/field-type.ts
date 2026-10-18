@@ -1,6 +1,11 @@
+import type { Chainable } from "./chain";
 import type { FieldOptions } from "./field";
 
 export type Endian = "little" | "big";
+
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CFieldType<T, O extends FieldOptions = {}> extends Chainable {}
 
 export abstract class CFieldType<T, const O extends FieldOptions = {}> {
   readonly options: O;

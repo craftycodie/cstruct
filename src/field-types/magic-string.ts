@@ -7,6 +7,7 @@ import {
 } from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
+import { MAGIC_VALUE } from "../modifiers";
 
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
@@ -22,6 +23,10 @@ export class CMagicString<
     super(options);
     this.magic = magic;
     this.bytes = utf8Encoder.encode(magic);
+  }
+
+  get [MAGIC_VALUE](): S {
+    return this.magic;
   }
 
   getSize(): number {
