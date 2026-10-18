@@ -21,11 +21,23 @@ export type FlattenIntersection<T> = T extends object
     }
   : T;
 
+type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+
+/** True when N is written with three or more digits (N >= 100). */
+type IsLargeCount<N extends number> =
+  `${N}` extends `${Digit}${Digit}${Digit}${string}` ? true : false;
+
 /**
- * Generate a tuple type of length N (mutable, not readonly)
+ * Generate a tuple type of length N (mutable, not readonly).
+ * Counts of 100 or more widen to T[]: large tuples hit TypeScript's
+ * instantiation depth limit and are unreadable in editors anyway.
  */
-export type Tuple<T, N extends number, R extends T[] = []> = number extends N
+export type Tuple<T, N extends number> = number extends N
   ? T[]
-  : R["length"] extends N
-    ? R
-    : Tuple<T, N, [...R, T]>;
+  : IsLargeCount<N> extends true
+    ? T[]
+    : BuildTuple<T, N>;
+
+type BuildTuple<T, N extends number, R extends T[] = []> = R["length"] extends N
+  ? R
+  : BuildTuple<T, N, [...R, T]>;

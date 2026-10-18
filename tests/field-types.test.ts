@@ -35,6 +35,19 @@ describe("c.infer", () => {
       value: number;
     } | null>();
   });
+
+  it("uses tuples below 100 elements and arrays from 100 up", () => {
+    const small = c.array(c.u8(), 3);
+    const edge = c.array(c.u8(), 99);
+    const large = c.array(Point, 1000);
+    expectTypeOf<c.infer<typeof small>>().toEqualTypeOf<
+      [number, number, number]
+    >();
+    expectTypeOf<c.infer<typeof edge>["length"]>().toEqualTypeOf<99>();
+    expectTypeOf<c.infer<typeof large>>().toEqualTypeOf<
+      { x: number; y: number }[]
+    >();
+  });
 });
 
 describe("@c.field property type enforcement", () => {
