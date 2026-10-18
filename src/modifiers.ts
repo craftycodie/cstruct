@@ -88,6 +88,7 @@ export function applyModifiers(codec: Codec, options: unknown): Codec {
     return codec;
   }
   return {
+    usesParent: codec.usesParent,
     read: (ctx, at, parent) => {
       const value = codec.read(ctx, at, parent);
       runAsserts(asserts, value);

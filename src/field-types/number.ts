@@ -76,6 +76,7 @@ const CODEC_FACTORIES: Record<
   u8: (check) => {
     const codec: NumberCodec = {
       read: (ctx, at) => ctx.u8[at],
+      readSource: (at) => `u8[${at}]`,
       write: (ctx, at, value) => {
         ctx.u8[at] = check(value);
       },
@@ -85,6 +86,7 @@ const CODEC_FACTORIES: Record<
   i8: (check) => {
     const codec: NumberCodec = {
       read: (ctx, at) => (ctx.u8[at] << 24) >> 24,
+      readSource: (at) => `((u8[${at}] << 24) >> 24)`,
       write: (ctx, at, value) => {
         ctx.u8[at] = check(value);
       },
@@ -94,60 +96,72 @@ const CODEC_FACTORIES: Record<
   u16: (check) => [
     {
       read: (ctx, at) => ctx.dv.getUint16(at, true),
+      readSource: (at) => `dv.getUint16(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setUint16(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getUint16(at, false),
+      readSource: (at) => `dv.getUint16(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setUint16(at, check(value), false),
     },
   ],
   i16: (check) => [
     {
       read: (ctx, at) => ctx.dv.getInt16(at, true),
+      readSource: (at) => `dv.getInt16(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setInt16(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getInt16(at, false),
+      readSource: (at) => `dv.getInt16(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setInt16(at, check(value), false),
     },
   ],
   u32: (check) => [
     {
       read: (ctx, at) => ctx.dv.getUint32(at, true),
+      readSource: (at) => `dv.getUint32(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setUint32(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getUint32(at, false),
+      readSource: (at) => `dv.getUint32(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setUint32(at, check(value), false),
     },
   ],
   i32: (check) => [
     {
       read: (ctx, at) => ctx.dv.getInt32(at, true),
+      readSource: (at) => `dv.getInt32(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setInt32(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getInt32(at, false),
+      readSource: (at) => `dv.getInt32(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setInt32(at, check(value), false),
     },
   ],
   f32: (check) => [
     {
       read: (ctx, at) => ctx.dv.getFloat32(at, true),
+      readSource: (at) => `dv.getFloat32(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setFloat32(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getFloat32(at, false),
+      readSource: (at) => `dv.getFloat32(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setFloat32(at, check(value), false),
     },
   ],
   f64: (check) => [
     {
       read: (ctx, at) => ctx.dv.getFloat64(at, true),
+      readSource: (at) => `dv.getFloat64(${at}, true)`,
       write: (ctx, at, value) => ctx.dv.setFloat64(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getFloat64(at, false),
+      readSource: (at) => `dv.getFloat64(${at}, false)`,
       write: (ctx, at, value) => ctx.dv.setFloat64(at, check(value), false),
     },
   ],

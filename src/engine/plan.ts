@@ -11,6 +11,12 @@ import {
   expectObject,
   type Parent,
 } from "./codec";
+import {
+  generateReader,
+  generateWriter,
+  type StructReader,
+  type StructWriter,
+} from "./codegen";
 import type { Ctx } from "./ctx";
 
 /** Fixed-count array of one element codec. */
@@ -18,11 +24,13 @@ export class ArrayCodec implements Codec<unknown[]> {
   readonly count: number;
   readonly element: Codec;
   readonly stride: number;
+  readonly usesParent: boolean | undefined;
 
   constructor(element: Codec, count: number, stride: number) {
     this.element = element;
     this.count = count;
     this.stride = stride;
+    this.usesParent = element.usesParent;
   }
 
   read(ctx: Ctx, at: number, parent: Parent): unknown[] {
@@ -72,19 +80,26 @@ export class StructPlan implements Codec<Parent> {
 
   /** Creates the object a read fills: a class instance or a plain record. */
   readonly create: () => object;
+  /** Class constructor wrapper, or undefined for plain records. */
+  private readonly classCreate: (() => object) | undefined;
+  /** Generated reader, built on first read (undefined: use closures). */
+  private fastRead: StructReader | undefined | null = null;
+  /** Generated writer, built on first write (undefined: use closures). */
+  private fastWrite: StructWriter | undefined | null = null;
 
   constructor(
     names: string[],
     offsets: number[],
     codecs: Codec[],
     defaults: readonly (readonly [string, () => unknown])[] = [],
-    create: () => object = () => ({})
+    create?: () => object
   ) {
     this.names = names;
     this.offsets = offsets;
     this.codecs = codecs;
     this.defaults = defaults;
-    this.create = create;
+    this.classCreate = create;
+    this.create = create ?? (() => ({}));
   }
 
   /**
@@ -104,8 +119,26 @@ export class StructPlan implements Codec<Parent> {
     return record;
   }
 
+  /** Reads into a new object with the closures (precise error paths). */
+  private readonly slowRead: StructReader = (ctx, at) =>
+    this.readInto(ctx, at, this.create());
+
+  /** The fastest available reader for a new object. */
+  getReader(): StructReader {
+    if (this.fastRead === null) {
+      this.fastRead = generateReader({
+        names: this.names,
+        offsets: this.offsets,
+        codecs: this.codecs,
+        create: this.classCreate,
+        slow: this.slowRead,
+      });
+    }
+    return this.fastRead ?? this.slowRead;
+  }
+
   read(ctx: Ctx, at: number): Parent {
-    return this.readInto(ctx, at, this.create());
+    return this.getReader()(ctx, at);
   }
 
   /** Read every field into `out` (a fresh record or a class instance). */
@@ -123,8 +156,8 @@ export class StructPlan implements Codec<Parent> {
     return out;
   }
 
-  write(ctx: Ctx, at: number, value: Parent): void {
-    const record = this.effective(expectObject(value));
+  /** Writes a prepared record with the closures (precise error paths). */
+  private readonly slowWrite: StructWriter = (ctx, at, record) => {
     const { names, offsets, codecs } = this;
     let i = 0;
     try {
@@ -134,6 +167,28 @@ export class StructPlan implements Codec<Parent> {
     } catch (error) {
       throw withPath(error, "write", names[i]);
     }
+  };
+
+  /** Validate a value and fill its defaults, giving the record to write. */
+  prepare(value: unknown): Parent {
+    return this.effective(expectObject(value));
+  }
+
+  /** The fastest available writer for a prepared record. */
+  getRecordWriter(): StructWriter {
+    if (this.fastWrite === null) {
+      this.fastWrite = generateWriter({
+        names: this.names,
+        offsets: this.offsets,
+        codecs: this.codecs,
+        slow: this.slowWrite,
+      });
+    }
+    return this.fastWrite ?? this.slowWrite;
+  }
+
+  write(ctx: Ctx, at: number, value: Parent): void {
+    this.getRecordWriter()(ctx, at, this.prepare(value));
   }
 }
 

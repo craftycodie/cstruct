@@ -288,6 +288,18 @@ export class Struct<F extends StructFields = StructFields> {
     }
   }
 
+  /** @internal Read into a new object (a class instance for class layouts). */
+  readNew(buffer: BytesLike, offset: number, endian: EndianType): object {
+    const plan = this.plan(endian);
+    try {
+      const ctx = createCtx(buffer);
+      checkRange(ctx.u8, offset, this.byteSize);
+      return plan.read(ctx, offset);
+    } catch (error) {
+      throw asCStructError(error, "read");
+    }
+  }
+
   read(
     buffer: BytesLike,
     offset?: number,
@@ -301,11 +313,10 @@ export class Struct<F extends StructFields = StructFields> {
     endian?: EndianType
   ): StructSchemaToTS<F> {
     const resolved = resolveRead(offsetOrOptions, endian);
-    return this.readInto(
+    return this.readNew(
       buffer,
       resolved.offset,
-      resolved.endian,
-      {}
+      resolved.endian
     ) as StructSchemaToTS<F>;
   }
 

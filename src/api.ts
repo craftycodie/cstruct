@@ -1,10 +1,28 @@
 import { classImpl, fieldImpl } from "./class";
+import { setCodegen } from "./engine/codegen";
 import { enumField } from "./factories";
 import type { FieldType } from "./field";
 import { cImpl } from "./impl";
 import { offsetof, read, sizeof, write } from "./io";
 
+export interface ConfigureOptions {
+  /**
+   * Generate specialized readers and writers with `new Function` (default
+   * true). They fall back to closures automatically where code generation is
+   * blocked (Content Security Policy, Cloudflare Workers). Applies to
+   * schemas first read or written after the call.
+   */
+  codegen?: boolean;
+}
+
+function configure(options: ConfigureOptions): void {
+  if (options.codegen !== undefined) {
+    setCodegen(options.codegen);
+  }
+}
+
 export const c = Object.assign(cImpl, {
+  configure,
   /** C enum stored as a numeric type; decodes to the key names. */
   enum: enumField,
   field: fieldImpl,

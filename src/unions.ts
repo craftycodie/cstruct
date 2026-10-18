@@ -278,6 +278,7 @@ export class CDiscriminatedUnion<
     const arms = this.armStructs.map((struct) => compileType(struct, env));
     const armSizes = this.armStructs.map((struct) => struct.getSize());
     return {
+      usesParent: true,
       read: (ctx, at, parent) => {
         const index = select(parent);
         return index === null ? null : arms[index].read(ctx, at, parent);

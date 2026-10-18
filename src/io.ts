@@ -81,11 +81,10 @@ export function read(
     );
   }
   if (isClassCtor(target)) {
-    return (getClassStruct(target) as cImpl.Struct).readInto(
+    return (getClassStruct(target) as cImpl.Struct).readNew(
       buffer,
       resolved.offset,
-      resolved.endian,
-      new target()
+      resolved.endian
     );
   }
   if (isClassInstance(target)) {

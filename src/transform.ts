@@ -65,6 +65,7 @@ export class CTransform<const Inner, Out> extends CFieldType<
     const codec = compileType(this.innerType, env);
     const { decode, encode } = this;
     return {
+      usesParent: codec.usesParent,
       read: (ctx, at, parent) => decode(codec.read(ctx, at, parent)),
       write: (ctx, at, value, parent) =>
         codec.write(ctx, at, encode(value), parent),

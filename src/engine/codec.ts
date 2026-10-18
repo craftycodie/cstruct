@@ -19,6 +19,14 @@ export type Parent = Record<string, any>;
 /** Compiled reader/writer for one field type in one environment. */
 export interface Codec<T = any> {
   read(ctx: Ctx, at: number, parent: Parent): T;
+  /**
+   * JavaScript expression reading the value at byte offset expression `at`,
+   * using locals `dv` (DataView) and `u8` (Uint8Array). Lets generated
+   * struct readers inline primitive reads.
+   */
+  readSource?: (at: string) => string;
+  /** True when reading depends on the parent record (union selectors). */
+  usesParent?: boolean;
   write(ctx: Ctx, at: number, value: T, parent: Parent): void;
 }
 

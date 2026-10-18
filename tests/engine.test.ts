@@ -174,3 +174,76 @@ describe("strings", () => {
     expect(c.read(Schema, bytes, "big").label).toBe("Hé✓");
   });
 });
+
+describe("generated readers", () => {
+  it("never fall back to the slow path for valid input", async () => {
+    const { codegenStats } = await import("../src/engine/codegen");
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { BlfChunkContentHeader } = await import("./examples/chdr-schema");
+    const before = codegenStats.slowPaths;
+    const bytes = readFileSync(
+      join(import.meta.dirname, "examples/fixtures/chdr.bin")
+    );
+    for (let i = 0; i < 3; i++) {
+      c.read(BlfChunkContentHeader, bytes, "big");
+    }
+    expect(codegenStats.slowPaths).toBe(before);
+  });
+
+  it("report errors with paths through the slow path", () => {
+    const Inner = c.struct({ tag: c.MagicNumber(1, c.u8()) });
+    const Outer = c.struct({ a: c.u8(), inner: Inner });
+    expect(() => c.read(Outer, Buffer.from([0, 2]))).toThrow(
+      "read failed at inner.tag: Magic number mismatch"
+    );
+  });
+});
+
+describe("code generation fallback", () => {
+  const Inner = c.struct({ id: c.u16(), name: c.string(6) });
+  const Kinds = c.struct({
+    kind: c.u8(),
+    items: c.array(Inner, 2),
+    data: c.match("kind", { 1: c.struct({ v: c.u32() }) }),
+    flags: c.u8().array(3),
+  });
+  const value: c.input<typeof Kinds> = {
+    kind: 1,
+    items: [
+      { id: 1, name: "one" },
+      { id: 2, name: "two" },
+    ],
+    data: { v: 7 },
+    flags: [1, 2, 3],
+  };
+
+  function roundTrip() {
+    const copy = Kinds.extend({});
+    const bytes = c.write(copy, value);
+    return { bytes: [...bytes], value: c.read(copy, bytes) };
+  }
+
+  it("gives identical results with closures only", () => {
+    const generated = roundTrip();
+    c.configure({ codegen: false });
+    try {
+      expect(roundTrip()).toEqual(generated);
+    } finally {
+      c.configure({ codegen: true });
+    }
+  });
+
+  it("falls back to closures when new Function is blocked", () => {
+    const original = globalThis.Function;
+    const generated = roundTrip();
+    (globalThis as { Function: unknown }).Function = function blocked() {
+      throw new EvalError("Code generation from strings disallowed");
+    };
+    try {
+      expect(roundTrip()).toEqual(generated);
+    } finally {
+      globalThis.Function = original;
+    }
+  });
+});

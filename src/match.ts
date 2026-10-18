@@ -131,6 +131,7 @@ export class CMatch<
     };
 
     return {
+      usesParent: true,
       read: (ctx, at, parent) => {
         const arm = select(parent);
         return arm ? arm.codec.read(ctx, at, parent) : null;
