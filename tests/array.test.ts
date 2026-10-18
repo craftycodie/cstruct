@@ -125,8 +125,16 @@ describe("arrays", () => {
     expect(c.read(WithBitfieldArray, written, "little")).toEqual(sample);
   });
 
-  it("allocates nested arrays", () => {
-    expect(c.sizeof(WithNestedArray)).toBe(12);
+  it("lays out nested arrays like C (u32 matrix[3][2] is 24 bytes)", () => {
+    expect(c.sizeof(WithNestedArray)).toBe(24);
+    const matrix: [[number, number], [number, number], [number, number]] = [
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ];
+    const bytes = c.write(WithNestedArray, { matrix }, "little");
+    expect(bytes.readUInt32LE(8)).toBe(3);
+    expect(c.read(WithNestedArray, bytes, "little")).toEqual({ matrix });
   });
 
   it("rejects invalid enum value in array element", () => {

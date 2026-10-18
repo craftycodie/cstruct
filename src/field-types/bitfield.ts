@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expectObject,
   NO_PARENT,
   readWith,
@@ -65,13 +66,13 @@ export class CBitfield<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](endian: Endian): Codec<Record<string, boolean>> {
+  [COMPILE](env: CompileEnv): Codec<Record<string, boolean>> {
     const keys = this.keys;
     const count = keys.length;
 
     if (this.type instanceof CBigint) {
       // 64-bit storage: work on two 32-bit words to stay in number arithmetic.
-      const little = endian === "little";
+      const little = env.endian === "little";
       const loAt = little ? 0 : 4;
       const hiAt = little ? 4 : 0;
       return {
@@ -104,7 +105,11 @@ export class CBitfield<
       };
     }
 
-    const storage = numericCodec(this.type, endian) as Codec<number>;
+    // Bits are built to fit the storage width, so no range check is needed.
+    const storage = numericCodec(this.type, {
+      endian: env.endian,
+      checked: false,
+    }) as Codec<number>;
     const width = this.type.getSize() * 8;
     const signed = isSignedNumeric(this.type);
     return {

@@ -1,4 +1,4 @@
-import { COMPILE, type Codec } from "../engine/codec";
+import { COMPILE, type Codec, type CompileEnv } from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -31,7 +31,7 @@ export class CPadding<const O extends FieldOptions = {}> extends CFieldType<
     buffer.fill(0, offset, offset + this.bytes);
   }
 
-  [COMPILE](_endian: Endian): Codec<undefined> {
+  [COMPILE](_env: CompileEnv): Codec<undefined> {
     const bytes = this.bytes;
     return {
       read: () => undefined,

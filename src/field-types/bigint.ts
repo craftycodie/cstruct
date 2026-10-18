@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expectBigint,
   readWith,
   writeWith,
@@ -14,36 +15,61 @@ export type BigintTypeToTS<_K extends BigintKind> = bigint;
 
 type BigintCodec = Codec<bigint>;
 
-/** [little-endian, big-endian] codec per kind. */
-const BIGINT_CODECS: Record<BigintKind, readonly [BigintCodec, BigintCodec]> = {
-  u64: [
+/** Validates a written value and returns it as a bigint. */
+type Check = (value: unknown) => bigint;
+
+const MIN_64 = -(2n ** 63n);
+const MAX_64 = 2n ** 64n - 1n;
+
+function rangeCheck(kind: BigintKind): Check {
+  return (value) => {
+    const n = expectBigint(value);
+    if (n < MIN_64 || n > MAX_64) {
+      throw new RangeError(`${n} is out of range for ${kind}`);
+    }
+    return n;
+  };
+}
+
+/** [little-endian, big-endian] codecs per kind, validating writes with `check`. */
+const CODEC_FACTORIES: Record<
+  BigintKind,
+  (check: Check) => readonly [BigintCodec, BigintCodec]
+> = {
+  u64: (check) => [
     {
       read: (ctx, at) => ctx.dv.getBigUint64(at, true),
-      write: (ctx, at, value) =>
-        ctx.dv.setBigUint64(at, expectBigint(value), true),
+      write: (ctx, at, value) => ctx.dv.setBigUint64(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getBigUint64(at, false),
-      write: (ctx, at, value) =>
-        ctx.dv.setBigUint64(at, expectBigint(value), false),
+      write: (ctx, at, value) => ctx.dv.setBigUint64(at, check(value), false),
     },
   ],
-  i64: [
+  i64: (check) => [
     {
       read: (ctx, at) => ctx.dv.getBigInt64(at, true),
-      write: (ctx, at, value) =>
-        ctx.dv.setBigInt64(at, expectBigint(value), true),
+      write: (ctx, at, value) => ctx.dv.setBigInt64(at, check(value), true),
     },
     {
       read: (ctx, at) => ctx.dv.getBigInt64(at, false),
-      write: (ctx, at, value) =>
-        ctx.dv.setBigInt64(at, expectBigint(value), false),
+      write: (ctx, at, value) => ctx.dv.setBigInt64(at, check(value), false),
     },
   ],
 };
 
-export function bigintCodec(kind: BigintKind, endian: Endian): BigintCodec {
-  return BIGINT_CODECS[kind][endian === "big" ? 1 : 0];
+const UNCHECKED_CODECS = {
+  u64: CODEC_FACTORIES.u64(expectBigint),
+  i64: CODEC_FACTORIES.i64(expectBigint),
+};
+const CHECKED_CODECS = {
+  u64: CODEC_FACTORIES.u64(rangeCheck("u64")),
+  i64: CODEC_FACTORIES.i64(rangeCheck("i64")),
+};
+
+export function bigintCodec(kind: BigintKind, env: CompileEnv): BigintCodec {
+  const table = env.checked ? CHECKED_CODECS : UNCHECKED_CODECS;
+  return table[kind][env.endian === "big" ? 1 : 0];
 }
 
 export class CBigint<
@@ -74,8 +100,8 @@ export class CBigint<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](endian: Endian): BigintCodec {
-    return bigintCodec(this.kind, endian);
+  [COMPILE](env: CompileEnv): BigintCodec {
+    return bigintCodec(this.kind, env);
   }
 }
 

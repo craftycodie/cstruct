@@ -15,37 +15,64 @@ function legacyBytes(ctx: Ctx): Buffer {
 /** The record being read or written around a field (used by discriminated unions). */
 export type Parent = Record<string, any>;
 
-/** Compiled reader/writer for one field type at one endianness. */
+/** Compiled reader/writer for one field type in one environment. */
 export interface Codec<T = any> {
   read(ctx: Ctx, at: number, parent: Parent): T;
   write(ctx: Ctx, at: number, value: T, parent: Parent): void;
+}
+
+/** What a codec is compiled for. Instances are canonical: compare by identity. */
+export interface CompileEnv {
+  /** Validate integer ranges on write. */
+  readonly checked: boolean;
+  readonly endian: Endian;
+}
+
+const ENVS: readonly CompileEnv[] = [
+  Object.freeze({ endian: "little", checked: false }),
+  Object.freeze({ endian: "big", checked: false }),
+  Object.freeze({ endian: "little", checked: true }),
+  Object.freeze({ endian: "big", checked: true }),
+];
+
+function envIndex(endian: Endian, checked: boolean): number {
+  return (endian === "big" ? 1 : 0) | (checked ? 2 : 0);
+}
+
+export function envFor(endian: Endian, checked = true): CompileEnv {
+  return ENVS[envIndex(endian, checked)];
+}
+
+/** Apply an endianness the type pins through its own options. */
+export function resolveEnv(type: unknown, env: CompileEnv): CompileEnv {
+  const pinned = (type as { options?: { endian?: Endian } } | null)?.options
+    ?.endian;
+  return pinned && pinned !== env.endian ? envFor(pinned, env.checked) : env;
 }
 
 /** Internal hook: built-in field types return a specialized codec. */
 export const COMPILE: unique symbol = Symbol("cstruct.compile");
 
 export interface Compilable {
-  [COMPILE](endian: Endian): Codec;
+  [COMPILE](env: CompileEnv): Codec;
 }
 
 export const NO_PARENT: Parent = Object.freeze({});
 
-const OWN_CODECS = new WeakMap<
-  object,
-  [Codec | undefined, Codec | undefined]
->();
+const OWN_CODECS = new WeakMap<object, (Codec | undefined)[]>();
 
-/** The type's own compiled codec, cached per endianness. */
-export function ownCodec(type: Compilable, endian: Endian): Codec {
+/** The type's own compiled codec, cached per environment. */
+export function ownCodec(type: Compilable, env: CompileEnv): Codec {
+  const resolved = resolveEnv(type, env);
   let slots = OWN_CODECS.get(type);
   if (!slots) {
-    slots = [undefined, undefined];
+    slots = [undefined, undefined, undefined, undefined];
     OWN_CODECS.set(type, slots);
   }
-  const index = endian === "big" ? 1 : 0;
+  const index = envIndex(resolved.endian, resolved.checked);
   let codec = slots[index];
   if (!codec) {
-    codec = type[COMPILE](endian);
+    codec = type[COMPILE](resolved);
     slots[index] = codec;
   }
   return codec;
@@ -92,10 +119,11 @@ function isStructLike(value: unknown): value is StructLikeType {
 }
 
 /** Codec for any field type: the fast path when available, else its public methods. */
-export function compileType(type: unknown, endian: Endian): Codec {
+export function compileType(type: unknown, env: CompileEnv): Codec {
   if (hasTrustedHook(type)) {
-    return ownCodec(type, endian);
+    return ownCodec(type, env);
   }
+  const { endian } = resolveEnv(type, env);
   if (isCFieldType(type)) {
     const custom: CFieldType<unknown> = type;
     return {
@@ -126,7 +154,7 @@ export function readWith<T>(
 ): T {
   const ctx = createCtx(buffer);
   checkRange(ctx.u8, offset, type.getSize());
-  return ownCodec(type, endian).read(ctx, offset, parent);
+  return ownCodec(type, envFor(endian)).read(ctx, offset, parent);
 }
 
 /** Public `write(buffer, offset, value, endian)` for built-in types. */
@@ -140,7 +168,7 @@ export function writeWith<T>(
 ): void {
   const ctx = createCtx(buffer);
   checkRange(ctx.u8, offset, type.getSize());
-  ownCodec(type, endian).write(ctx, offset, value, parent);
+  ownCodec(type, envFor(endian)).write(ctx, offset, value, parent);
 }
 
 export function describeValue(value: unknown): string {

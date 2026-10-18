@@ -3,6 +3,7 @@ export { CFieldType, isCFieldType } from "../field-type";
 export * from "./bigint";
 export { CBitfield } from "./bitfield";
 export { bool, CBool } from "./bool";
+export { bytes, CBytes } from "./bytes";
 export { CEnum } from "./enum";
 export { CMagicNumber } from "./magic-number";
 export { CMagicString } from "./magic-string";

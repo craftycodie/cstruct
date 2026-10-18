@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   NO_PARENT,
   readWith,
   writeWith,
@@ -70,8 +71,8 @@ export class CEnum<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](endian: Endian): Codec<string> {
-    const storage = numericCodec(this.type, endian);
+  [COMPILE](env: CompileEnv): Codec<string> {
+    const storage = numericCodec(this.type, env);
     const wide = this.type instanceof CBigint;
     const { keyMap, valueMap } = this;
     return {

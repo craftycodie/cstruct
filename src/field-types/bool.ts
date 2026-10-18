@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expected,
   readWith,
   writeWith,
@@ -40,7 +41,7 @@ export class CBool<const O extends FieldOptions = {}> extends CFieldType<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](_endian: Endian): Codec<boolean> {
+  [COMPILE](_env: CompileEnv): Codec<boolean> {
     return BOOL_CODEC;
   }
 }

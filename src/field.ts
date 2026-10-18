@@ -3,6 +3,8 @@ import type { CFieldType, Endian } from "./field-type";
 import type { CDiscriminatedUnion } from "./unions";
 
 export interface FieldOptions {
+  /** Byte order for this field, overriding the struct and the call site. */
+  endian?: Endian;
   padAfter?: number;
   padBefore?: number;
 }
@@ -126,8 +128,6 @@ export function unwrapFieldType(value: StructFieldValue): FieldType {
   ) {
     return value as FieldType;
   }
-  if ("__carray" in value && (value as CArray).element) {
-    return unwrapFieldType((value as CArray).element as StructFieldValue);
-  }
+  // Arrays are field types in their own right, so nested arrays keep their count.
   return value as FieldType;
 }

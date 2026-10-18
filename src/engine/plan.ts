@@ -1,18 +1,19 @@
 import { withPath } from "../errors";
-import type { Endian } from "../field-type";
 import { isCPadding } from "../field-types/padding";
 import type { Layout } from "../layout";
 import {
   type Codec,
+  type CompileEnv,
   compileType,
   describeValue,
+  envFor,
   expectObject,
   type Parent,
 } from "./codec";
 import type { Ctx } from "./ctx";
 
 /** Fixed-count array of one element codec. */
-class ArrayCodec implements Codec<unknown[]> {
+export class ArrayCodec implements Codec<unknown[]> {
   readonly count: number;
   readonly element: Codec;
   readonly stride: number;
@@ -109,7 +110,7 @@ export class StructPlan implements Codec<Parent> {
  * Build the plan for a layout. Padding is skipped entirely: writes target
  * zero-filled memory, and reads leave padding out of the result.
  */
-export function compileStruct(layout: Layout, endian: Endian): StructPlan {
+export function compileStruct(layout: Layout, env: CompileEnv): StructPlan {
   const names: string[] = [];
   const offsets: number[] = [];
   const codecs: Codec[] = [];
@@ -117,7 +118,8 @@ export function compileStruct(layout: Layout, endian: Endian): StructPlan {
     if (isCPadding(field.type)) {
       continue;
     }
-    const element = compileType(field.type, endian);
+    const fieldEnv = field.endian ? envFor(field.endian, env.checked) : env;
+    const element = compileType(field.type, fieldEnv);
     names.push(field.name);
     offsets.push(field.offset);
     codecs.push(

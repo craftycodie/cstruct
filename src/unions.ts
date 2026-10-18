@@ -1,7 +1,9 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   compileType,
+  envFor,
   NO_PARENT,
   readWith,
   writeWith,
@@ -87,12 +89,12 @@ export class CUnion<
     }
     const ctx = createCtx(buffer);
     checkRange(ctx.u8, offset, struct.getSize());
-    compileType(struct, endian).write(ctx, offset, value, NO_PARENT);
+    compileType(struct, envFor(endian)).write(ctx, offset, value, NO_PARENT);
   }
 
-  [COMPILE](endian: Endian): Codec<Record<string, unknown>> {
+  [COMPILE](env: CompileEnv): Codec<Record<string, unknown>> {
     const names = this.memberNames;
-    const codecs = this.structs.map((struct) => compileType(struct, endian));
+    const codecs = this.structs.map((struct) => compileType(struct, env));
     return {
       read: (ctx, at) => {
         const out: Record<string, unknown> = {};
@@ -253,10 +255,10 @@ export class CDiscriminatedUnion<
     writeWith(this, buffer, offset, value, endian, parent);
   }
 
-  [COMPILE](endian: Endian): Codec<UnionOfArms<Arms> | null | undefined> {
+  [COMPILE](env: CompileEnv): Codec<UnionOfArms<Arms> | null | undefined> {
     const select = this.select;
     const size = this.size;
-    const arms = this.armStructs.map((struct) => compileType(struct, endian));
+    const arms = this.armStructs.map((struct) => compileType(struct, env));
     const armSizes = this.armStructs.map((struct) => struct.getSize());
     return {
       read: (ctx, at, parent) => {

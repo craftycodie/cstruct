@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expected,
   readWith,
   writeWith,
@@ -38,9 +39,9 @@ export class CWString<
     return this.length * 2;
   }
 
-  [COMPILE](endian: Endian): Codec<string> {
+  [COMPILE](env: CompileEnv): Codec<string> {
     const length = this.length;
-    const little = endian === "little";
+    const little = env.endian === "little";
     return {
       read: (ctx, at) => decodeUtf16(ctx.u8, at, length, little),
       write: (ctx, at, value) => {

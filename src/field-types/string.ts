@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expected,
   readWith,
   writeWith,
@@ -41,7 +42,7 @@ export class CString<
     return this.length;
   }
 
-  [COMPILE](_endian: Endian): Codec<string> {
+  [COMPILE](_env: CompileEnv): Codec<string> {
     const { length, encoding } = this;
     return {
       read: (ctx, at) => {

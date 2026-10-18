@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   NO_PARENT,
   readWith,
   writeWith,
@@ -36,8 +37,8 @@ export class CMagicNumber<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](endian: Endian): Codec<N> {
-    const storage = numericCodec(this.type, endian);
+  [COMPILE](env: CompileEnv): Codec<N> {
+    const storage = numericCodec(this.type, env);
     const magic = this.magic;
     // u64/i64 storage reads bigint; compare in the storage's own domain.
     const stored: number | bigint =

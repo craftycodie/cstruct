@@ -5,6 +5,7 @@ import {
   type StructFieldValue,
   unwrapFieldType,
 } from "./field";
+import type { Endian } from "./field-type";
 import { createPadding } from "./field-types";
 
 /** A field at a fixed byte offset inside its struct. */
@@ -13,6 +14,8 @@ export interface LayoutField {
   readonly count: number | undefined;
   /** Byte size of one element (equal to `size` when not an array). */
   readonly elementSize: number;
+  /** Byte order pinned by the field's options. */
+  readonly endian: Endian | undefined;
   readonly name: string;
   /** Byte offset from the start of the struct. */
   readonly offset: number;
@@ -27,6 +30,7 @@ export interface Layout {
 
 interface NormalizedField {
   count?: number;
+  endian?: Endian;
   name: string;
   type: FieldType;
 }
@@ -43,14 +47,16 @@ function normalizeFields(
         type: createPadding(fieldOptions.padBefore),
       });
     }
+    const endian = fieldOptions.endian;
     if (isCArray(value)) {
       result.push({
         name,
         type: unwrapArrayElement(value.element),
         count: value.count,
+        endian,
       });
     } else {
-      result.push({ name, type: unwrapFieldType(value) });
+      result.push({ name, type: unwrapFieldType(value), endian });
     }
     if (fieldOptions.padAfter) {
       result.push({
@@ -85,6 +91,7 @@ export function computeLayout(
       name: field.name,
       type: field.type,
       count: field.count,
+      endian: field.endian,
       offset,
       elementSize,
       size,

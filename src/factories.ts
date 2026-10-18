@@ -5,6 +5,7 @@ import {
   i64 as bigintI64,
   u64 as bigintU64,
   bool as boolField,
+  bytes as bytesField,
   CBitfield,
   CEnum,
   CMagicNumber,
@@ -65,6 +66,7 @@ export function Time64<const O extends IFieldOptions = {}>(options?: O) {
 }
 
 export const bool = boolField;
+export const bytes = bytesField;
 
 export function MagicNumber<
   N extends number,

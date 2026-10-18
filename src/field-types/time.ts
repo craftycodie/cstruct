@@ -1,6 +1,7 @@
 import {
   COMPILE,
   type Codec,
+  type CompileEnv,
   expected,
   readWith,
   writeWith,
@@ -28,8 +29,8 @@ export class time64_t<const O extends FieldOptions = {}> extends CFieldType<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](endian: Endian): Codec<Date> {
-    const little = endian === "little";
+  [COMPILE](env: CompileEnv): Codec<Date> {
+    const little = env.endian === "little";
     return {
       read: (ctx, at) =>
         new Date(Number(ctx.dv.getBigInt64(at, little)) * 1000),

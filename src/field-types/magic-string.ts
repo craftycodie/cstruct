@@ -1,4 +1,10 @@
-import { COMPILE, type Codec, readWith, writeWith } from "../engine/codec";
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  readWith,
+  writeWith,
+} from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -30,7 +36,7 @@ export class CMagicString<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](_endian: Endian): Codec<S> {
+  [COMPILE](_env: CompileEnv): Codec<S> {
     const { magic, bytes } = this;
     const size = bytes.length;
     return {

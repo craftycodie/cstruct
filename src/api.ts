@@ -1,7 +1,7 @@
 import { classImpl, fieldImpl } from "./class";
 import type { FieldType } from "./field";
 import { cImpl } from "./impl";
-import { read, sizeof, write } from "./io";
+import { offsetof, read, sizeof, write } from "./io";
 
 export const c = Object.assign(cImpl, {
   field: fieldImpl,
@@ -9,10 +9,14 @@ export const c = Object.assign(cImpl, {
   read,
   write,
   sizeof,
+  offsetof,
 });
 export namespace c {
   export type FieldOptions = cImpl.FieldOptions;
   export type Endian = cImpl.Endian;
+  export type StructOptions = import("./options").StructOptions;
+  export type ReadOptions = import("./options").ReadOptions;
+  export type WriteOptions = import("./options").WriteOptions;
   export type StructFields = cImpl.StructFields;
   export type StructSchemaToTS<F extends StructFields> =
     cImpl.StructSchemaToTS<F>;

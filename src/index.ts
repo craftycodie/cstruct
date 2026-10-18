@@ -15,6 +15,7 @@ export {
   CBigint,
   CBitfield,
   CBool,
+  CBytes,
   CEnum,
   CFieldType,
   CMagicNumber,

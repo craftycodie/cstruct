@@ -15,11 +15,23 @@ export type UnionToIntersection<U> = (
  * Recursively flattens nested object types for cleaner display
  * This makes the type display cleaner in IDEs
  */
-export type FlattenIntersection<T> = T extends object
-  ? {
-      [K in keyof T]: T[K] extends object ? FlattenIntersection<T[K]> : T[K];
-    }
-  : T;
+export type FlattenIntersection<T> = T extends BuiltinObject
+  ? T
+  : T extends object
+    ? {
+        [K in keyof T]: FlattenIntersection<T[K]>;
+      }
+    : T;
+
+/** Object types kept as-is by FlattenIntersection (mapping them loses methods). */
+type BuiltinObject =
+  | ArrayBuffer
+  | ArrayBufferView
+  | Date
+  | Map<unknown, unknown>
+  | RegExp
+  | Set<unknown>
+  | Function;
 
 type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
