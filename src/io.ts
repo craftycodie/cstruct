@@ -115,6 +115,11 @@ export function write<A extends CArray<any, any, any>>(
   data: cImpl.input<A>,
   endianOrOptions?: WriteArg
 ): Buffer;
+export function write<C extends ClassCtor>(
+  ctor: C,
+  data: cImpl.input<C>,
+  endianOrOptions?: WriteArg
+): Buffer;
 export function write<T extends object>(
   instance: T,
   endianOrOptions?: WriteArg
@@ -142,6 +147,15 @@ export function write(
       resolved
     );
   }
+  if (isClassCtor(target)) {
+    if (arg2 === undefined || arg2 === "little" || arg2 === "big") {
+      throw new Error("c.write(Class, data) requires a data object");
+    }
+    return (getClassStruct(target) as cImpl.Struct).write(
+      arg2 as Record<string, any>,
+      arg3 as WriteOptions
+    );
+  }
   if (isClassInstance(target)) {
     return classStruct(target).write(
       target as Record<string, any>,
@@ -149,7 +163,7 @@ export function write(
     );
   }
   throw new Error(
-    "c.write() expects a c.struct schema, c.array(...) or @c.class() instance"
+    "c.write() expects a c.struct schema, c.array(...), or a @c.class() class or instance"
   );
 }
 

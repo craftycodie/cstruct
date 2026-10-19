@@ -1,4 +1,5 @@
 import type { Chainable } from "./chain";
+import { type ClassCtor, getClassStruct, isClassCtor } from "./class";
 import {
   COMPILE,
   type Codec,
@@ -128,9 +129,16 @@ export class CUnion<
   }
 }
 
-export type UnionWhen = (parent: Record<string, unknown>) => boolean;
+/**
+ * Arm predicate. `parent` is the record being read or written (typed `any`
+ * so predicates can declare the parent's real type, e.g. `(m: Header) => …`).
+ */
+export type UnionWhen = (parent: any) => boolean;
 
-export type UnionArmInput<S extends StructFieldType = StructFieldType> =
+/** A union arm: a `c.struct` schema or a `@c.class()` class. */
+export type UnionArmTarget = StructFieldType | ClassCtor;
+
+export type UnionArmInput<S extends UnionArmTarget = UnionArmTarget> =
   readonly [S, UnionWhen];
 
 export type UnionArmSchema<A extends UnionArmInput> = A extends readonly [
@@ -139,14 +147,16 @@ export type UnionArmSchema<A extends UnionArmInput> = A extends readonly [
 ]
   ? S extends CTypes.Struct<infer F>
     ? CTypes.StructSchemaToTS<F>
-    : never
+    : S extends ClassCtor<infer I>
+      ? I
+      : never
   : never;
 
 export type UnionOfArms<Arms extends readonly UnionArmInput[]> = UnionArmSchema<
   Arms[number]
 >;
 
-export function arm<S extends StructFieldType>(
+export function arm<S extends UnionArmTarget>(
   struct: S,
   when: UnionWhen
 ): UnionArmInput<S> {
@@ -154,12 +164,12 @@ export function arm<S extends StructFieldType>(
 }
 
 export function when<
-  S extends StructFieldType,
-  const V extends number | string,
+  S extends UnionArmTarget,
+  const V extends number | string | bigint,
 >(
   value: V,
   struct: S,
-  discriminant: (parent: Record<string, unknown>) => number | string
+  discriminant: (parent: any) => number | string | bigint
 ): UnionArmInput<S> {
   return [struct, (parent) => discriminant(parent) === value];
 }
@@ -185,7 +195,12 @@ function parseArms(arms: readonly UnionArmInput[]): {
         "Union arm requires c.arm(Struct, (parent) => ...) or c.when(value, Struct, (parent) => ...)"
       );
     }
-    structs.push(input[0]);
+    const target = input[0];
+    structs.push(
+      isClassCtor(target)
+        ? (getClassStruct(target) as unknown as StructFieldType)
+        : target
+    );
     whens.push(input[1]);
   }
 

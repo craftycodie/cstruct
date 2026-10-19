@@ -42,6 +42,9 @@ export namespace c {
   export type StructSchemaToTS<F extends StructFields> =
     cImpl.StructSchemaToTS<F>;
   export type infer<T> = cImpl.infer<T>;
+  /** Decoded value of `c.Bitfield(flags, storage)` for a flag definition. */
+  export type Bitfield<K extends import("./field-types").BitfieldFlags> =
+    import("./field-types").BitfieldValue<K>;
   /** Accepted write type: padding omitted; magic, unions and defaults optional. */
   export type input<T> = cImpl.input<T>;
   /** Decoded read type (same as `c.infer`). */
