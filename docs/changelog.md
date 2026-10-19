@@ -8,9 +8,8 @@ Performance, a zod-style API, C layout support and decorator fixes.
 
 ### Performance
 
-- Structs compile into cached plans with static offsets, and readers and writers are code-generated on first use, with an automatic fallback where `new Function` is blocked. Against alpha.3: reading a 16-field struct ~9–11× faster, 1000 × Vec3 53×, the Halo Reach CHDR fixture 6.9×; writing 4.3×, 44× and 5.1×. See [Performance](./guide/performance.md).
+- Structs compile into cached plans with static offsets, and readers and writers are code-generated on first use, with an automatic fallback where `new Function` is blocked. See [Performance](./guide/performance.md).
 - `c.configure({ codegen: false })` turns code generation off.
-- `npm run bench` / `bench:save` / `bench:compare` benchmark against hand-written `DataView` code.
 
 ### Added
 

@@ -62,9 +62,6 @@ export default defineConfig({
           name: "legacy-decorators",
           include,
           exclude: stage3Only,
-          benchmark: {
-            include: ["bench/**/*.bench.ts"],
-          },
         },
       },
       {
@@ -74,9 +71,6 @@ export default defineConfig({
         test: {
           name: "stage3-decorators",
           include,
-          benchmark: {
-            include: [],
-          },
         },
       },
     ],
