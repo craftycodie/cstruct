@@ -1,3 +1,12 @@
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  expected,
+  readWith,
+  writeWith,
+} from "../engine/codec";
+import { decodeUtf16, encodeUtf16 } from "../engine/text";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -13,53 +22,38 @@ export class CWString<
     this.length = length;
   }
 
-  private swapUtf16ByteOrder(bytes: Buffer): Buffer {
-    const swapped = Buffer.from(bytes);
-    for (let i = 0; i < swapped.length - 1; i += 2) {
-      const first = swapped[i];
-      swapped[i] = swapped[i + 1];
-      swapped[i + 1] = first;
-    }
-    return swapped;
+  read(buffer: Uint8Array, offset: number, endian: Endian): string {
+    return readWith(this, buffer, offset, endian);
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): string {
-    const byteLength = this.length * 2;
-    const bytes = buffer.subarray(offset, offset + byteLength);
-
-    let nullIndex = -1;
-    for (let i = 0; i < bytes.length - 1; i += 2) {
-      if (bytes[i] === 0 && bytes[i + 1] === 0) {
-        nullIndex = i;
-        break;
-      }
-    }
-
-    const lengthToRead = nullIndex === -1 ? byteLength : nullIndex;
-    const stringBytes = bytes.subarray(0, lengthToRead);
-    const littleEndianBytes =
-      endian === "little" ? stringBytes : this.swapUtf16ByteOrder(stringBytes);
-    return littleEndianBytes.toString("utf16le");
-  }
-
-  write(buffer: Buffer, offset: number, value: string, endian: Endian): void {
-    const byteLength = this.length * 2;
-    const stringBytes = Buffer.from(value, "utf16le");
-    const bytesToWrite =
-      stringBytes.length > byteLength
-        ? stringBytes.subarray(0, byteLength)
-        : stringBytes;
-    const outputBytes =
-      endian === "little"
-        ? bytesToWrite
-        : this.swapUtf16ByteOrder(bytesToWrite);
-    outputBytes.copy(buffer, offset);
-    if (outputBytes.length < byteLength) {
-      buffer.fill(0, offset + outputBytes.length, offset + byteLength);
-    }
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: string,
+    endian: Endian
+  ): void {
+    writeWith(this, buffer, offset, value, endian);
   }
 
   getSize(): number {
     return this.length * 2;
+  }
+
+  getAlign(): number {
+    return 2;
+  }
+
+  [COMPILE](env: CompileEnv): Codec<string> {
+    const length = this.length;
+    const little = env.endian === "little";
+    return {
+      read: (ctx, at) => decodeUtf16(ctx.u8, at, length, little),
+      write: (ctx, at, value) => {
+        if (typeof value !== "string") {
+          expected("string", value);
+        }
+        encodeUtf16(ctx.u8, at, length, value, little);
+      },
+    };
   }
 }

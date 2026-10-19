@@ -2,9 +2,12 @@ import { CArray } from "./array";
 import type { FieldOptions as IFieldOptions, StructFieldValue } from "./field";
 import type { Endian as EndianType } from "./field-type";
 import {
+  type BitfieldFlags,
   i64 as bigintI64,
   u64 as bigintU64,
+  bits as bitsField,
   bool as boolField,
+  bytes as bytesField,
   CBitfield,
   CEnum,
   CMagicNumber,
@@ -45,7 +48,14 @@ export function array<
   return new CArray(element, count, options);
 }
 
-export function String<L extends number, const O extends IFieldOptions = {}>(
+/*
+ * Naming: lowercase factories are C-native types (char[], wchar_t[], enum,
+ * union, bit-fields). Capitalized factories are cstruct extensions with
+ * semantics C lacks (Time64 decodes to Date; Magic* assert on read).
+ */
+
+/** Fixed-length character array, `char name[N]`, decoded up to the first NUL. */
+export function string<L extends number, const O extends IFieldOptions = {}>(
   length: L,
   encoding: BufferEncoding = "utf8",
   options?: O
@@ -53,18 +63,27 @@ export function String<L extends number, const O extends IFieldOptions = {}>(
   return new CString(length, encoding, options);
 }
 
-export function WString<L extends number, const O extends IFieldOptions = {}>(
+/** Fixed-length UTF-16 array, `wchar_t name[N]` (2 bytes per unit). */
+export function wstring<L extends number, const O extends IFieldOptions = {}>(
   length: L,
   options?: O
 ) {
   return new CWString(length, options);
 }
 
+/** @deprecated Use `c.string`: lowercase names are C-native types. */
+export const String = string;
+
+/** @deprecated Use `c.wstring`: lowercase names are C-native types. */
+export const WString = wstring;
+
 export function Time64<const O extends IFieldOptions = {}>(options?: O) {
   return time64Field(options);
 }
 
+export const bits = bitsField;
 export const bool = boolField;
+export const bytes = bytesField;
 
 export function MagicNumber<
   N extends number,
@@ -81,15 +100,21 @@ export function MagicString<
   return new CMagicString(magic, options);
 }
 
+/**
+ * Flags as an object of booleans (a cstruct extension; in C, flags are a
+ * plain integer, which is `c.u32()` here).
+ * Writes also accept the raw integer; `toRaw` / `fromRaw` convert.
+ */
 export function Bitfield<
-  const K extends readonly string[],
+  const K extends BitfieldFlags,
   PT extends CNumeric,
   const O extends IFieldOptions = {},
->(keys: K, type: PT, options?: O) {
-  return new CBitfield(keys, type, options);
+>(flags: K, type: PT, options?: O) {
+  return new CBitfield(flags, type, options);
 }
 
-export function Enum<
+/** C enum stored as `type`; decodes to the key names. Unknown values throw. */
+export function enumField<
   const T extends readonly string[] | Record<string, number>,
   PT extends CNumeric,
   const O extends IFieldOptions = {},
@@ -97,18 +122,27 @@ export function Enum<
   return new CEnum(keysOrMap, type, options);
 }
 
-export function Union<
+/** C union: every member decodes from the same bytes. */
+export function union<
   S extends Record<string, Struct<any>>,
   const O extends IFieldOptions = {},
 >(members: S, options?: O) {
   return new CUnion(members, options);
 }
 
+/** @deprecated Use `c.enum`: lowercase names are C-native types. */
+export const Enum = enumField;
+
+/** @deprecated Use `c.union`: lowercase names are C-native types. */
+export const Union = union;
+
 export function discriminatedUnion<
   const Arms extends readonly import("./unions").UnionArmInput[],
 >(options: { size: number }, ...arms: Arms) {
   return discriminatedUnionField(options, ...arms);
 }
+
+export { match } from "./match";
 
 export const arm = unionArm;
 export const when = unionWhen;
@@ -124,4 +158,6 @@ export const i64 = bigintI64;
 export const f32 = numberF32;
 export const f64 = numberF64;
 export const pad = padField;
+
+/** @deprecated Use `c.pad(n)`, or import `CPadding` from the package root. */
 export const Pad = CPadding;

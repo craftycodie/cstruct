@@ -1,8 +1,11 @@
 import type { CArray } from "./array";
+import type { Chainable } from "./chain";
 import type { CFieldType, Endian } from "./field-type";
 import type { CDiscriminatedUnion } from "./unions";
 
 export interface FieldOptions {
+  /** Byte order for this field, overriding the struct and the call site. */
+  endian?: Endian;
   padAfter?: number;
   padBefore?: number;
 }
@@ -10,7 +13,7 @@ export interface FieldOptions {
 /** Runtime shape shared by nested struct field types. */
 export interface StructFieldType {
   getSize(): number;
-  read(buffer: Buffer, offset?: number, endian?: Endian): unknown;
+  read(buffer: Uint8Array, offset?: number, endian?: Endian): unknown;
   write(data: Record<string, unknown>, endian?: Endian): Buffer;
 }
 
@@ -20,6 +23,11 @@ export type FieldType =
   | CFieldType<any, any>
   | StructFieldType
   | CDiscriminatedUnion;
+
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CStructField<S, O extends FieldOptions = {}>
+  extends Chainable {}
 
 export class CStructField<S, const O extends FieldOptions = {}> {
   readonly __cstructField = true as const;
@@ -43,8 +51,15 @@ export function isCStructField(
   );
 }
 
-export class CClassField<S, const O extends FieldOptions = {}> {
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CClassField<S, O extends FieldOptions = {}, I = unknown>
+  extends Chainable {}
+
+/** A `@c.class()` type embedded as a field; `I` is the class's instance type. */
+export class CClassField<S, const O extends FieldOptions = {}, I = unknown> {
   readonly __cclassField = true as const;
+  /** Type-only: the decorated class's instance type. */
+  declare readonly __instance?: I;
   readonly struct: S;
   readonly options: O;
 
@@ -62,6 +77,13 @@ export function isCClassField(value: unknown): value is CClassField<any, any> {
     (value as CClassField<any>).__cclassField === true
   );
 }
+
+// biome-ignore-start lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CAnnotatedField<
+  T extends StructFieldValue = StructFieldValue,
+  O extends FieldOptions = {},
+> extends Chainable {}
+// biome-ignore-end lint/correctness/noUnusedVariables: type parameters must match the class they merge into
 
 export class CAnnotatedField<
   T extends StructFieldValue = StructFieldValue,
@@ -126,8 +148,6 @@ export function unwrapFieldType(value: StructFieldValue): FieldType {
   ) {
     return value as FieldType;
   }
-  if ("__carray" in value && (value as CArray).element) {
-    return unwrapFieldType((value as CArray).element as StructFieldValue);
-  }
+  // Arrays are field types in their own right, so nested arrays keep their count.
   return value as FieldType;
 }

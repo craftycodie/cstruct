@@ -1,53 +1,64 @@
 # Arrays
 
-Fixed-length arrays use `c.array(element, count)`:
+Fixed-length arrays use `c.array(element, count)` or `.array(count)`:
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
 const Header = c.struct({
   values: c.array(c.u32(), 4),
+  rgba: c.u8().array(4),
 });
 ```
 
-**C equivalent** — a fixed-size member array; elements are laid out back-to-back with no gaps:
+**C equivalent** — elements back-to-back with no gaps:
 
 ```c
 typedef struct {
-    uint32_t values[4]; /* c.array(c.u32(), 4) — 16 bytes total */
+    uint32_t values[4]; /* 16 bytes */
+    uint8_t  rgba[4];
 } Header;
 ```
+
+Arrays below 100 elements infer as tuples (`[number, number, number, number]`); from 100 up they infer as `number[]` to keep types fast.
 
 ## Nested arrays
 
 ```ts
 const Layout = c.struct({
   matrix: c.array(c.array(c.u32(), 4), 3),
-  flags: c.array(c.Bitfield(["a", "b"], c.u8()), 2),
+  flags: c.Bitfield(["a", "b"], c.u8()).array(2),
 });
 ```
 
-**C equivalent** — nested arrays and repeated non-primitive slots use the same contiguous packing:
-
 ```c
 typedef struct {
-    uint32_t matrix[3][4]; /* c.array(c.array(c.u32(), 4), 3) — row-major, 48 bytes */
-    uint8_t flags[2];      /* c.array(c.Bitfield(["a","b"], c.u8()), 2) */
+    uint32_t matrix[3][4]; /* row-major, 48 bytes */
+    uint8_t  flags[2];
 } Layout;
 ```
 
-Each `flags[i]` is a single byte with bits 0 (`a`) and 1 (`b`), same as [Bitfield](./field-types/bitfield.md). cstruct decodes every slot to `{ a: boolean, b: boolean }` on read.
+`matrix[1][2]` is at byte offset `(1 * 4 + 2) * 4`: `c.offsetof(Layout, "matrix[1][2]")` is 24.
 
-On decorated classes, `@c.field(c.u32(), { count: 4 })` is equivalent to `@c.field(c.array(c.u32(), 4))`.
+## Raw bytes
 
-## Supported elements
+For opaque data (hashes, GUIDs, blobs) use [`c.bytes(n)`](./field-types/bytes.md) instead of `c.u8().array(n)`. It reads as a `Buffer`, not a number array.
 
-Primitives, structs, `c.Enum()`, `c.Bitfield()`, discriminated unions, field types (`c.String`, etc.), and nested arrays. Use a single `c.pad(n)` field (not `{ count }`) for reserved bytes.
+## Elements
 
-## Layout
+Any field type can be an element: primitives, structs, `c.class(...)`, enums, bitfields, strings, unions and other arrays. Use a `c.pad(n)` field (not an array) for reserved bytes.
 
-Elements are packed contiguously. Struct size is `count × element size`. Use `padBefore` / `padAfter` on the field for outer gaps.
+On decorated classes, `@c.field(c.u32(), { count: 4 })` equals `@c.field(c.array(c.u32(), 4))`.
+
+## Top-level arrays
+
+`c.read`, `c.write` and `c.sizeof` accept an array without a wrapping struct:
+
+```ts
+const Points = c.array(c.struct({ x: c.f32(), y: c.f32() }), 100);
+const points = c.read(Points, bytes);
+```
 
 ## Validation
 
-On write, the value must be a JS array with exactly `count` entries.
+On write, the value must be an array with at least `count` elements. Extra elements are ignored.

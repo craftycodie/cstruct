@@ -1,0 +1,14 @@
+{
+  // Type-checks the decorator tests with standard (stage 3) decorators.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/decorators.test.ts",
+    "tests/decorators.stage3.test.ts",
+    "tests/field-types.test.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}

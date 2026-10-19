@@ -1,6 +1,11 @@
+import type { Chainable } from "./chain";
 import type { FieldOptions } from "./field";
 
 export type Endian = "little" | "big";
+
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CFieldType<T, O extends FieldOptions = {}> extends Chainable {}
 
 export abstract class CFieldType<T, const O extends FieldOptions = {}> {
   readonly options: O;
@@ -10,6 +15,15 @@ export abstract class CFieldType<T, const O extends FieldOptions = {}> {
   }
 
   abstract getSize(): number;
+
+  /**
+   * Natural alignment in bytes, used by structs declared with `align` or
+   * `pack`. Defaults to 1; override for custom types that C would align.
+   */
+  getAlign(): number {
+    return 1;
+  }
+
   abstract read(buffer: Buffer, offset: number, endian: Endian): T;
   abstract write(
     buffer: Buffer,
@@ -17,6 +31,12 @@ export abstract class CFieldType<T, const O extends FieldOptions = {}> {
     value: T,
     endian: Endian
   ): void;
+}
+
+/** Natural alignment of any field type; 1 when it does not declare one. */
+export function alignOf(type: unknown): number {
+  const getAlign = (type as { getAlign?: () => number } | null)?.getAlign;
+  return typeof getAlign === "function" ? getAlign.call(type) : 1;
 }
 
 export function isCFieldType(value: unknown): value is CFieldType<any, any> {

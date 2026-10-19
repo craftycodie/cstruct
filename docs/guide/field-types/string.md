@@ -1,12 +1,13 @@
-# Latin-1 string — `c.String(n)`
+# String — `c.string(n, encoding?)`
 
-Fixed-size, NUL-terminated Latin-1 (one byte per character, not UTF-8). The argument `n` is the **byte size** of the whole slot (same as `sizeof` the C array).
+Fixed-size character array. `n` is the **byte size** of the slot (`sizeof` of the C array). Reads stop at the first NUL byte. Writes truncate to `n` bytes without splitting a character and zero-fill the rest.
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
 const Tag = c.struct({
-  name: c.String(16),
+  name: c.string(16), // utf8
+  gamertag: c.string(16, "latin1"), // one byte per character
 });
 ```
 
@@ -14,8 +15,11 @@ const Tag = c.struct({
 
 ```c
 typedef struct {
-    char name[16]; /* Latin-1 bytes, NUL-terminated within the 16-byte slot */
+    char name[16];
+    char gamertag[16];
 } Tag;
 ```
 
-A value like `"Player1"` occupies the first 7 bytes (`'P' 'l' 'a' 'y' 'e' 'r' '1' '\0'`); the rest of the array is unused padding inside the field.
+The encoding can be any Node `BufferEncoding`; utf8 is the default. Use `"latin1"` for 8-bit text or data that may not be valid UTF-8: utf8 decoding replaces invalid bytes with U+FFFD, so they would not survive a round trip. Without `Buffer` (browsers, Deno), `utf8`, `latin1`, `ascii` and `utf16le` are supported.
+
+`c.String` is a deprecated alias.

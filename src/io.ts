@@ -1,13 +1,25 @@
+import { type CArray, isCArray } from "./array";
 import {
   type ClassCtor,
-  getClassFieldNames,
   getClassStruct,
   isClassCtor,
   isClassInstance,
 } from "./class";
+import { compileType, envFor } from "./engine/codec";
+import type { BytesLike } from "./engine/ctx";
+import { runRead, runWrite } from "./engine/run";
 import { cImpl } from "./impl";
+import {
+  type ReadOptions,
+  resolveRead,
+  resolveWrite,
+  type WriteOptions,
+} from "./options";
 
 export type Endian = cImpl.Endian;
+
+type ReadArg = number | Endian | ReadOptions;
+type WriteArg = Endian | WriteOptions;
 
 export function isStructSchema(
   value: unknown
@@ -15,104 +27,180 @@ export function isStructSchema(
   return value instanceof cImpl.Struct;
 }
 
-function classInstanceToRecord(instance: object): Record<string, unknown> {
-  const ctor = instance.constructor as ClassCtor;
-  const names = getClassFieldNames(ctor);
-  const data: Record<string, unknown> = {};
-  for (const name of names) {
-    data[name] = (instance as Record<string, unknown>)[name];
-  }
-  return data;
+function classStruct(instance: object): cImpl.Struct {
+  return getClassStruct(instance.constructor as ClassCtor) as cImpl.Struct;
 }
 
-function isEndian(value: unknown): value is Endian {
-  return value === "little" || value === "big";
-}
-
+/**
+ * Decode `buffer` with a schema, a top-level `c.array(...)`, or into a
+ * `@c.class()` instance (which is mutated and returned).
+ *
+ * The third argument is an offset, an endianness, or `{ offset, endian }`.
+ */
 export function read<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
-  buffer: Buffer,
-  offset?: number,
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
   endian?: Endian
 ): cImpl.StructSchemaToTS<F>;
-export function read<F extends cImpl.StructFields>(
-  schema: cImpl.Struct<F>,
-  buffer: Buffer,
-  endian: Endian
-): cImpl.StructSchemaToTS<F>;
-export function read<T extends object>(
-  instance: T,
-  buffer: Buffer,
-  offset?: number,
+export function read<A extends CArray<any, any, any>>(
+  array: A,
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
   endian?: Endian
-): T;
+): cImpl.infer<A>;
+export function read<C extends ClassCtor>(
+  ctor: C,
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
+  endian?: Endian
+): InstanceType<C>;
 export function read<T extends object>(
   instance: T,
-  buffer: Buffer,
-  endian: Endian
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
+  endian?: Endian
 ): T;
 export function read(
   target: unknown,
-  buffer: Buffer,
-  offsetOrEndian: number | Endian = 0,
-  endian: Endian = "little"
+  buffer: BytesLike,
+  offsetOrOptions?: ReadArg,
+  endian?: Endian
 ): unknown {
-  const offset = isEndian(offsetOrEndian) ? 0 : offsetOrEndian;
-  const resolvedEndian = isEndian(offsetOrEndian) ? offsetOrEndian : endian;
+  const resolved = resolveRead(offsetOrOptions, endian);
 
   if (isStructSchema(target)) {
-    return target.read(buffer, offset, resolvedEndian);
+    return target.read(buffer, resolved);
+  }
+  if (isCArray(target)) {
+    return runRead(
+      compileType(target, envFor(resolved.endian)),
+      target.getSize(),
+      buffer,
+      resolved.offset
+    );
+  }
+  if (isClassCtor(target)) {
+    return (getClassStruct(target) as cImpl.Struct).readNew(
+      buffer,
+      resolved.offset,
+      resolved.endian
+    );
   }
   if (isClassInstance(target)) {
-    const data = getClassStruct(target.constructor as ClassCtor).read(
+    return classStruct(target).readInto(
       buffer,
-      offset,
-      resolvedEndian
+      resolved.offset,
+      resolved.endian,
+      target
     );
-    return Object.assign(target, data);
   }
-  throw new Error("c.read() expects a c.struct schema or @c.class() instance");
+  throw new Error(
+    "c.read() expects a c.struct schema, c.array(...) or @c.class() class or instance"
+  );
 }
 
+/**
+ * Encode `data` with a schema or top-level `c.array(...)`, or encode a
+ * `@c.class()` instance. The last argument is an endianness or
+ * `{ endian, checked, into, offset }`.
+ */
 export function write<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
-  data: cImpl.StructSchemaToTS<F>,
-  endian?: Endian
+  data: cImpl.input<cImpl.Struct<F>>,
+  endianOrOptions?: WriteArg
 ): Buffer;
-export function write<T extends object>(instance: T, endian?: Endian): Buffer;
-export function write(target: unknown, arg2?: unknown, arg3?: Endian): Buffer {
-  if (isStructSchema(target)) {
+export function write<A extends CArray<any, any, any>>(
+  array: A,
+  data: cImpl.input<A>,
+  endianOrOptions?: WriteArg
+): Buffer;
+export function write<T extends object>(
+  instance: T,
+  endianOrOptions?: WriteArg
+): Buffer;
+export function write(
+  target: unknown,
+  arg2?: unknown,
+  arg3?: WriteArg
+): Buffer {
+  if (isStructSchema(target) || isCArray(target)) {
     if (arg2 === undefined || arg2 === "little" || arg2 === "big") {
       throw new Error("c.write(schema, data) requires a data object");
     }
-    const endian = arg3 ?? "little";
-    return target.write(arg2 as Record<string, unknown>, endian);
-  }
-  if (isClassInstance(target)) {
-    const endian = arg2 === "little" || arg2 === "big" ? arg2 : "little";
-    return getClassStruct(target.constructor as ClassCtor).write(
-      classInstanceToRecord(target),
-      endian
+    if (isStructSchema(target)) {
+      return (target as cImpl.Struct).write(
+        arg2 as Record<string, any>,
+        arg3 as WriteOptions
+      );
+    }
+    const resolved = resolveWrite(arg3);
+    return runWrite(
+      compileType(target, envFor(resolved.endian, resolved.checked)),
+      target.getSize(),
+      arg2,
+      resolved
     );
   }
-  throw new Error("c.write() expects a c.struct schema or @c.class() instance");
+  if (isClassInstance(target)) {
+    return classStruct(target).write(
+      target as Record<string, any>,
+      arg2 as WriteOptions
+    );
+  }
+  throw new Error(
+    "c.write() expects a c.struct schema, c.array(...) or @c.class() instance"
+  );
 }
 
+/**
+ * Packed size in bytes of a schema, `@c.class()` (constructor or instance),
+ * array or field type: `c.sizeof(c.u32())` is 4.
+ */
 export function sizeof<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>
 ): number;
-export function sizeof(instance: object): number;
+export function sizeof(type: { getSize(): number }): number;
+export function sizeof(classOrInstance: object): number;
 export function sizeof(target: unknown): number {
-  if (isStructSchema(target)) {
-    return target.getSize();
-  }
-  if (isClassInstance(target)) {
-    return getClassStruct(target.constructor as ClassCtor).getSize();
-  }
   if (isClassCtor(target)) {
     return getClassStruct(target).getSize();
   }
+  if (isClassInstance(target)) {
+    return classStruct(target).getSize();
+  }
+  if (
+    typeof target === "object" &&
+    target !== null &&
+    typeof (target as { getSize?: unknown }).getSize === "function"
+  ) {
+    return (target as { getSize(): number }).getSize();
+  }
   throw new Error(
-    "c.sizeof() expects a c.struct schema or @c.class() instance"
+    "c.sizeof() expects a schema, field type or @c.class() class/instance"
+  );
+}
+
+/**
+ * Byte offset of a field, like C `offsetof`. Accepts nested paths and array
+ * indexes: `c.offsetof(Header, "points[2].x")`.
+ */
+export function offsetof<F extends cImpl.StructFields>(
+  schema: cImpl.Struct<F>,
+  path: (keyof F & string) | (string & {})
+): number;
+export function offsetof(classOrInstance: object, path: string): number;
+export function offsetof(target: unknown, path: string): number {
+  if (isStructSchema(target)) {
+    return target.offsetOf(path);
+  }
+  if (isClassCtor(target)) {
+    return (getClassStruct(target) as cImpl.Struct).offsetOf(path);
+  }
+  if (isClassInstance(target)) {
+    return classStruct(target).offsetOf(path);
+  }
+  throw new Error(
+    "c.offsetof() expects a c.struct schema or @c.class() class/instance"
   );
 }

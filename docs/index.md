@@ -10,7 +10,7 @@ outline: false
 </h1>
 
 <p class="cstruct-lead">
-  Packed binary layouts for TypeScript — describe structs with <code>c.struct</code> schemas or <code>@c.class()</code> decorators, then read and write <code>Buffer</code> data with explicit endianness. Inspired by <a href="https://github.com/jam1garner/binrw">binrw</a>.
+  Binary layouts for TypeScript — describe structs with <code>c.struct</code> schemas or <code>@c.class()</code> decorators, then read and write bytes with explicit layout and byte order. Inspired by <a href="https://github.com/jam1garner/binrw">binrw</a>.
 </p>
 
 <p class="cstruct-meta">
@@ -42,7 +42,7 @@ import { c } from "@craftycodie/cstruct";
 const Dog = c.struct({
   bone_pile_count: c.u8(),
   favorite_bone: c.u16({ padBefore: 1 }),
-  name: c.String(16),
+  name: c.string(16),
 });
 
 const bytes = c.write(Dog, {
@@ -63,11 +63,15 @@ console.log(c.sizeof(Dog)); // 19
 
 **Scalars & layout** — Fixed-width integers and floats, `bigint` u64/i64, explicit padding, and nested structs.
 
-**Unions** — Overlapping `c.Union` and discriminated `c.discriminatedUnion` with `c.arm` / `c.when`.
+**Unions** — Tagged unions with `c.match`, predicate unions with `c.discriminatedUnion`, and overlapping `c.union`.
 
-**Field types** — `c.String`, `c.WString`, `c.Time64`, `c.Enum`, `c.Bitfield`, `c.MagicNumber`, `c.MagicString`, and fixed arrays.
+**Field types** — `c.string`, `c.wstring`, `c.bytes`, `c.Time64`, `c.enum`, `c.Bitfield`, `c.bits`, `c.MagicNumber`, `c.MagicString`, and fixed arrays.
 
-**Type helpers** — `c.infer<T>` and `c.UnionOf<Arms>` for decoded shapes.
+**C layout** — Packed by default, or natural alignment with `{ align: true }` / `{ pack: n }`; byte order per call, struct or field; `c.offsetof`.
+
+**Modifiers** — `.array(n)`, `.default(v)`, `.transform(decode, encode)`, `.assert(check)`, `.be()` / `.le()`.
+
+**Type helpers** — `c.infer<T>` / `c.output<T>` for reads, `c.input<T>` for writes.
 
 ## Get started
 

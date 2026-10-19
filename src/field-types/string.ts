@@ -1,3 +1,13 @@
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  expected,
+  readWith,
+  writeWith,
+} from "../engine/codec";
+import { ctxBuffer } from "../engine/ctx";
+import { decodeBytes, encodeBytes } from "../engine/text";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -7,7 +17,7 @@ export class CString<
   const O extends FieldOptions = {},
 > extends CFieldType<string, O> {
   readonly length!: L;
-  private readonly encoding: BufferEncoding;
+  readonly encoding: BufferEncoding;
 
   constructor(length: L, encoding: BufferEncoding = "utf8", options?: O) {
     super(options);
@@ -15,28 +25,49 @@ export class CString<
     this.encoding = encoding;
   }
 
-  read(buffer: Buffer, offset: number, _endian: Endian): string {
-    const bytes = buffer.subarray(offset, offset + this.length);
-    let nullIndex = bytes.indexOf(0);
-    if (nullIndex === -1) {
-      nullIndex = this.length;
-    }
-    return bytes.subarray(0, nullIndex).toString(this.encoding);
+  read(buffer: Uint8Array, offset: number, endian: Endian): string {
+    return readWith(this, buffer, offset, endian);
   }
 
-  write(buffer: Buffer, offset: number, value: string, _endian: Endian): void {
-    const stringBytes = Buffer.from(value, this.encoding);
-    const bytesToWrite =
-      stringBytes.length > this.length
-        ? stringBytes.subarray(0, this.length)
-        : stringBytes;
-    bytesToWrite.copy(buffer, offset);
-    if (bytesToWrite.length < this.length) {
-      buffer.fill(0, offset + bytesToWrite.length, offset + this.length);
-    }
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: string,
+    endian: Endian
+  ): void {
+    writeWith(this, buffer, offset, value, endian);
   }
 
   getSize(): number {
     return this.length;
+  }
+
+  [COMPILE](_env: CompileEnv): Codec<string> {
+    const { length, encoding } = this;
+    return {
+      read: (ctx, at) => {
+        const u8 = ctx.u8;
+        const limit = at + length;
+        let end = at;
+        while (end < limit && u8[end] !== 0) {
+          end++;
+        }
+        const buffer = ctxBuffer(ctx);
+        return buffer
+          ? buffer.toString(encoding, at, end)
+          : decodeBytes(u8, at, end, encoding);
+      },
+      write: (ctx, at, value) => {
+        if (typeof value !== "string") {
+          expected("string", value);
+        }
+        const buffer = ctxBuffer(ctx);
+        // Both paths truncate at `length` without splitting a character.
+        const written = buffer
+          ? buffer.write(value, at, length, encoding)
+          : encodeBytes(ctx.u8, at, length, value, encoding);
+        ctx.u8.fill(0, at + written, at + length);
+      },
+    };
   }
 }

@@ -1,11 +1,15 @@
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  NO_PARENT,
+  readWith,
+  writeWith,
+} from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
-import {
-  type CNumeric,
-  getNumericTypeSize,
-  readNumericValue,
-  writeNumericValue,
-} from "./numeric";
+import { CBigint } from "./bigint";
+import { type CNumeric, numericCodec } from "./numeric";
 
 type EnumKeys<T> = T extends readonly string[]
   ? T[number]
@@ -51,40 +55,48 @@ export class CEnum<
   }
 
   getSize(): number {
-    return getNumericTypeSize(this.type);
+    return this.type.getSize();
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): EnumKeys<T> {
-    const value = readNumericValue(
-      new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength),
-      offset,
-      this.type,
-      endian === "little"
-    );
-    const numericValue = Number(value);
-    const key = this.keyMap.get(numericValue);
-    if (key !== undefined) {
-      return key as EnumKeys<T>;
-    }
-    throw new Error(`Enum value ${numericValue} is not a valid enum value`);
+  getAlign(): number {
+    return this.type.getAlign();
+  }
+
+  read(buffer: Uint8Array, offset: number, endian: Endian): EnumKeys<T> {
+    return readWith(this, buffer, offset, endian);
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: EnumKeys<T>,
     endian: Endian
   ): void {
-    const mappedValue = this.valueMap.get(value);
-    if (mappedValue === undefined) {
-      throw new Error(`Invalid enum key: ${value}`);
-    }
-    writeNumericValue(
-      new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength),
-      offset,
-      this.type,
-      mappedValue,
-      endian === "little"
-    );
+    writeWith(this, buffer, offset, value, endian);
+  }
+
+  [COMPILE](env: CompileEnv): Codec<string> {
+    const storage = numericCodec(this.type, env);
+    const wide = this.type instanceof CBigint;
+    const { keyMap, valueMap } = this;
+    return {
+      read: (ctx, at) => {
+        const numericValue = Number(storage.read(ctx, at, NO_PARENT));
+        const key = keyMap.get(numericValue);
+        if (key === undefined) {
+          throw new Error(
+            `Enum value ${numericValue} is not a valid enum value`
+          );
+        }
+        return key;
+      },
+      write: (ctx, at, value) => {
+        const mapped = valueMap.get(value);
+        if (mapped === undefined) {
+          throw new Error(`Invalid enum key: ${value}`);
+        }
+        storage.write(ctx, at, wide ? BigInt(mapped) : mapped, NO_PARENT);
+      },
+    };
   }
 }

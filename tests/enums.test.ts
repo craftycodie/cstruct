@@ -33,7 +33,7 @@ describe("enums", () => {
   });
 
   it("rejects undefined values on read", () => {
-    const bytes = Buffer.alloc(8);
+    const bytes = Buffer.alloc(c.sizeof(GeneralMetadata));
     bytes[0] = 99;
     expect(() => c.read(GeneralMetadata, bytes, "little")).toThrow(
       "Enum value 99 is not a valid enum value"

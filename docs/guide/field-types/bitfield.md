@@ -1,39 +1,34 @@
-# Bitfield — `c.Bitfield(keys, storage)`
+# Bitfield — `c.Bitfield(flags, storage)`
 
-Flag groups packed into an integer primitive. Each flag is a **boolean** on read/write; cstruct packs them into **sequential** bit indices inside the storage width (`c.u8()`, `c.u32()`, …).
+Boolean flags packed into an integer, read as an object with one boolean per flag. This is a cstruct extension: in C, flags are a plain integer with `#define` masks, which is just `c.u32()` (or another integer type) here.
 
-## Sequential flags
-
-Bit index equals array position (first name → bit 0, second → bit 1, and so on):
+`flags` is a list of names (bit = position in the list) or a map of name to bit number. Bits never come from object key order, so a definition loaded from JSON has the same layout ([#1](https://github.com/craftycodie/cstruct/issues/1)).
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-const SkullFlags = [
-  "iron",
-  "black_eye",
-  "tough_luck",
-  "catch",
-] as const;
+const SkullFlags = ["iron", "black_eye", "tough_luck", "catch"] as const; // bits 0–3
+const Skulls = c.Bitfield(SkullFlags, c.u32());
 
-const Challenge = c.struct({
-  skulls: c.Bitfield(SkullFlags, c.u32()),
-});
+const Challenge = c.struct({ skulls: Skulls });
 
-const chunk = {
-  skulls: {
-    iron: true,
-    black_eye: false,
-    tough_luck: true,
-    catch: false,
-  },
-};
+c.write(Challenge, {
+  skulls: { iron: true, black_eye: false, tough_luck: true, catch: false },
+}); // u32 = 0b101
 
-const bytes = c.write(Challenge, chunk, "big");
-// u32 = 0b101 (bits 0 and 2 set: iron + tough_luck)
+c.read(Challenge, bytes).skulls; // { iron: true, black_eye: false, tough_luck: true, catch: false }
 ```
 
-**C equivalent** — sequential bit indices (array position → bit number):
+Explicit bits, for sparse or out-of-order flags:
+
+```ts
+const Difficulty = c.Bitfield(
+  { easy: 0, normal: 1, heroic: 2, legendary: 3, mythic: 9 },
+  c.u16()
+);
+```
+
+**C equivalent:**
 
 ```c
 #define SKULL_IRON        (1u << 0)
@@ -42,26 +37,30 @@ const bytes = c.write(Challenge, chunk, "big");
 #define SKULL_CATCH       (1u << 3)
 
 typedef struct {
-    uint32_t skulls; /* c.Bitfield(SkullFlags, c.u32()) */
+    uint32_t skulls; /* iron + tough_luck set: skulls == 0x5 */
 } Challenge;
-
-/* iron + tough_luck set: skulls == 0x5 */
 ```
 
-## Reserved bits
+Two flags on the same bit, or a bit past the storage width, throw when the field type is created.
 
-Unnamed bits read as `false` for each defined key. On write, only named flags are packed — reserved bits are cleared.
+## Converting to and from the integer
 
-## vs `c.Enum`
+To exchange values with code that uses the integer (another library, a network protocol, a database column), map between the two:
 
-| | `c.Enum` | `c.Bitfield` |
-| --- | --- | --- |
-| Value | One of N discrete values | Bit mask (combinable flags) |
-| TypeScript | string key | `{ flag: boolean, ... }` |
-| Validation | Must match a single enum member | Any combination of named bits |
+```ts
+Skulls.toRaw({ iron: true, black_eye: false, tough_luck: true, catch: false }); // 5
+Skulls.fromRaw(5); // { iron: true, black_eye: false, tough_luck: true, catch: false }
+```
 
-For a single true/false byte (not combinable flags), use [Boolean](./bool.md) instead.
+Writes also accept the raw integer directly: `c.write(Challenge, { skulls: 5 })`. Raw writes are range-checked like the storage type.
 
-## Custom bit layouts
+Unnamed bits read as nothing. A flags object writes them as 0; a raw integer is written as given.
 
-v2 only supports sequential bit indices. For sparse or non-sequential layouts, subclass `CFieldType` (see [Custom types](./custom-types.md)) and implement your own packing rules.
+## Choosing
+
+| | `c.enum` | `c.Bitfield` | `c.bits` | integer (`c.u32()`) |
+| --- | --- | --- | --- | --- |
+| Value | One of N values | Combinable 1-bit flags | Several multi-bit numbers | Raw flags |
+| TypeScript | key name | `{ flag: boolean }` | `{ field: number }` | `number` |
+
+Storage can be any integer type, including `c.u64()` for up to 64 flags (`toRaw` then returns a `bigint`). For multi-bit fields, use [`c.bits`](./bits.md).

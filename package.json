@@ -20,7 +20,7 @@
   "scripts": {
     "build": "node scripts/clean-dist.mjs && node scripts/prepare-build-src.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node scripts/write-cjs-package-json.mjs",
     "check": "ultracite check",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.stage3.json --noEmit",
     "docs": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
@@ -54,11 +54,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
-    "@swc/core": "^1.15.33",
     "@types/node": "^25.9.1",
     "typescript": "^5",
     "ultracite": "7.7.0",
-    "unplugin-swc": "^1.5.9",
     "vitepress": "^1.6.4",
     "vitest": "^3.2.4"
   }

@@ -1,6 +1,6 @@
 # Example structures
 
-These layouts are modeled on [blf_lib](https://github.com/craftycodie/blf) Reach TU1 definitions (`saved_game_files.rs`, `s_blf_chunk_content_header`). cstruct handles **packed struct I/O** — fixed layouts, padding, nested structs, unions, and field types (`Time64`, `String`, `WString`). It does **not** handle bitstreams or fields whose size depends on runtime bit reads.
+These layouts are modeled on [blf_lib](https://github.com/craftycodie/blf) Reach TU1 definitions (`saved_game_files.rs`, `s_blf_chunk_content_header`). cstruct handles **packed struct I/O** — fixed layouts, padding, nested structs, unions, and field types (`c.Time64`, `c.string`, `c.wstring`). It does **not** handle bitstreams or fields whose size depends on runtime bit reads.
 
 For unions and field-type APIs, see [Unions](./unions.md) and [Field types](./field-types/).
 
@@ -47,7 +47,7 @@ Uses `c.Time64()` (`u64` seconds → `Date`) and a fixed Latin-1 name buffer. Pa
 const ContentItemHistory = c.struct({
   timestamp: c.Time64(),
   xuid: c.u64(),
-  name: c.String(16),
+  name: c.string(16, "latin1"),
   is_online: c.u8({ padAfter: 3 }),
 });
 
@@ -144,25 +144,20 @@ const ContentItemMetadata = c.struct({
   display: ContentItemDisplayMetadata,
   creation_history: ContentItemHistory,
   modification_history: ContentItemHistory,
-  name: c.WString(0x80),
-  description: c.WString(0x80),
-  file_type_data: c.discriminatedUnion(
-    { size: 16 },
-    c.when(3, ContentItemFilmMetadata, (m) => m.general.file_type),
-    c.when(4, ContentItemFilmMetadata, (m) => m.general.file_type),
-    c.when(6, ContentItemGameVariantMetadata, (m) => m.general.file_type)
-  ),
-  activity_data: c.discriminatedUnion(
-    { size: 16 },
-    c.arm(
-      ContentItemMatchmakingMetadata,
-      (m) => m.general.activity === 3
-    )
-  ),
+  name: c.wstring(0x80),
+  description: c.wstring(0x80),
+  file_type_data: c.match("general.file_type", {
+    3: ContentItemFilmMetadata,
+    4: ContentItemFilmMetadata,
+    6: ContentItemGameVariantMetadata,
+  }),
+  activity_data: c.match("general.activity", {
+    3: ContentItemMatchmakingMetadata,
+  }),
 });
 ```
 
-For a game-variant file (`file_type === 6`), set `file_type_data: { icon_index: 2 }`. When `activity === 3`, set `activity_data: { hopper_identifier: 0 }`; otherwise leave it `null`.
+For a game-variant file (`file_type === 6`), set `file_type_data: { icon_index: 2 }`. When `activity === 3`, set `activity_data: { hopper_identifier: 0 }`; otherwise leave it out or `null`. Both slots are 16 bytes, the size of their largest arm.
 
 ## BLF CHDR chunk (big-endian)
 
@@ -170,7 +165,7 @@ Reach file-share **CHDR** chunks prepend a 12-byte BLF header, then the content-
 
 ```ts
 const BlfChunkContentHeader = c.struct({
-  signature: c.String(4),
+  signature: c.string(4),
   chunk_length: c.u32(),
   major: c.u16(),
   minor: c.u16(),
