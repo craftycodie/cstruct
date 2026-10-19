@@ -14,9 +14,10 @@ Performance, a zod-style API, C layout support and decorator fixes.
 
 ### Added
 
-- Lowercase C-native factories: `c.string`, `c.wstring`, `c.enum`, `c.bitfield`, `c.union`.
+- Lowercase C-native factories: `c.string`, `c.wstring`, `c.enum`, `c.union`.
+- `c.bitfield(flags, storage)`: flags as the plain storage integer, the C way, with `.mask` per flag. `c.Bitfield` stays the flag-object form and gains `toRaw` / `fromRaw` and raw-integer writes ([#1](https://github.com/craftycodie/cstruct/issues/1)).
 - `c.bits(spec, storage)` for multi-bit C bit-fields, and `c.bytes(n)` for raw bytes.
-- `c.bitfield({ name: bit }, storage)`: explicit flag bits again, as in 1.x ([#1](https://github.com/craftycodie/cstruct/issues/1)). Bitfield and bit-field layouts never depend on object key order, so definitions loaded from JSON keep their layout.
+- Bitfields accept an explicit `{ name: bit }` map again, as in 1.x ([#1](https://github.com/craftycodie/cstruct/issues/1)). Bitfield and bit-field layouts never depend on object key order, so definitions loaded from JSON keep their layout.
 - `c.match(path, arms, { size, fallback })`: tagged unions keyed by a field path, no casts needed.
 - Modifiers on every field type, struct and array: `.array(n)`, `.padBefore(n)`, `.padAfter(n)`, `.be()`, `.le()`, `.default(v)`, `.transform(decode, encode)`, `.assert(check, message)`.
 - `c.input<T>` (write type: padding omitted; magic, unions and defaults optional) and `c.output<T>`.
@@ -46,7 +47,7 @@ Most of these turn silent data corruption into errors. Check them when upgrading
 - `c.Bitfield` with more flags than its storage holds throws when created; `c.MagicString` is sized by its UTF-8 byte length.
 - `@c.field(type, { count })` now applies to struct and class field types (it was ignored for them).
 - Array types with 100 or more elements infer as `T[]` instead of a tuple, avoiding "type instantiation is excessively deep".
-- `c.String`, `c.WString`, `c.Enum`, `c.Bitfield`, `c.Union` and `c.Pad` are deprecated aliases.
+- `c.String`, `c.WString`, `c.Enum`, `c.Union` and `c.Pad` are deprecated aliases.
 
 ### Fixed
 

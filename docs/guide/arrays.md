@@ -27,7 +27,7 @@ Arrays below 100 elements infer as tuples (`[number, number, number, number]`); 
 ```ts
 const Layout = c.struct({
   matrix: c.array(c.array(c.u32(), 4), 3),
-  flags: c.bitfield(["a", "b"], c.u8()).array(2),
+  flags: c.Bitfield(["a", "b"], c.u8()).array(2),
 });
 ```
 

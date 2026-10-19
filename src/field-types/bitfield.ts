@@ -65,26 +65,20 @@ function parseFlags(
   };
 }
 
-/**
- * Boolean flags packed into an integer:
- *
- *   c.bitfield(["iron", "black_eye"], c.u32())    // bits 0 and 1
- *   c.bitfield({ iron: 0, mythic: 9 }, c.u32())   // explicit bits
- *
- * Bits not named read as nothing and are written as 0.
- */
-export class CBitfield<
-  const K extends BitfieldFlags,
-  T extends CNumeric,
-  const O extends FieldOptions = {},
-> extends CFieldType<BitfieldValue<K>, O> {
-  readonly flags: K;
-  private readonly names: string[];
-  private readonly bits: number[];
-  private readonly type: T;
+/** The storage integer: `bigint` for 64-bit storage, else `number`. */
+export type RawOf<T extends CNumeric> =
+  T extends CBigint<any, any> ? bigint : number;
 
-  constructor(flags: K, type: T, options?: O) {
-    super(options);
+/** Named bits of one storage integer, with conversions to and from flags. */
+class FlagLayout {
+  readonly names: string[];
+  readonly bits: number[];
+  /** 64-bit storage, handled as bigint. */
+  readonly wide: boolean;
+  private readonly signed: boolean;
+  private readonly width: number;
+
+  constructor(flags: BitfieldFlags, type: CNumeric) {
     const capacity = type.getSize() * 8;
     if (Array.isArray(flags) && flags.length > capacity) {
       throw new Error(
@@ -92,10 +86,114 @@ export class CBitfield<
       );
     }
     const parsed = parseFlags(flags, capacity, type.kind);
-    this.flags = flags;
     this.names = parsed.names;
     this.bits = parsed.bits;
+    this.wide = type instanceof CBigint;
+    this.signed = isSignedNumeric(type);
+    this.width = capacity;
+  }
+
+  /** Mask of each named bit, as the storage integer type. */
+  masks(): Record<string, number | bigint> {
+    const out: Record<string, number | bigint> = {};
+    this.names.forEach((name, i) => {
+      out[name] = this.wide
+        ? 1n << BigInt(this.bits[i])
+        : this.toStorage((1 << this.bits[i]) >>> 0);
+    });
+    return out;
+  }
+
+  /** Bring a 32-bit-or-narrower pattern into the storage type's range. */
+  private toStorage(raw: number): number {
+    return this.signed ? toSigned(raw, this.width) : raw >>> 0;
+  }
+
+  toRaw(value: unknown): number | bigint {
+    const flags = expectObject(value);
+    const { names, bits } = this;
+    if (this.wide) {
+      let raw = 0n;
+      for (let i = 0; i < names.length; i++) {
+        if (flags[names[i]]) {
+          raw |= 1n << BigInt(bits[i]);
+        }
+      }
+      return this.signed ? BigInt.asIntN(64, raw) : raw;
+    }
+    let raw = 0;
+    for (let i = 0; i < names.length; i++) {
+      if (flags[names[i]]) {
+        raw |= 1 << bits[i];
+      }
+    }
+    return this.toStorage(raw);
+  }
+
+  fromRaw(raw: number | bigint): Record<string, boolean> {
+    const { names, bits } = this;
+    const out: Record<string, boolean> = {};
+    if (typeof raw === "bigint" || this.wide) {
+      const big = BigInt.asUintN(64, BigInt(raw));
+      for (let i = 0; i < names.length; i++) {
+        out[names[i]] = ((big >> BigInt(bits[i])) & 1n) === 1n;
+      }
+      return out;
+    }
+    for (let i = 0; i < names.length; i++) {
+      out[names[i]] = ((raw >>> bits[i]) & 1) === 1;
+    }
+    return out;
+  }
+
+  /** A raw integer in the storage type's representation. */
+  normalizeRaw(raw: number | bigint): number | bigint {
+    if (this.wide) {
+      return typeof raw === "bigint" ? raw : BigInt(raw);
+    }
+    return typeof raw === "bigint" ? Number(raw) : raw;
+  }
+}
+
+function isRaw(value: unknown): value is number | bigint {
+  return typeof value === "number" || typeof value === "bigint";
+}
+
+/**
+ * Boolean flags packed into an integer (a cstruct extension; see
+ * `c.bitfield` for the C-native integer form):
+ *
+ *   c.Bitfield(["iron", "black_eye"], c.u32())    // bits 0 and 1
+ *   c.Bitfield({ iron: 0, mythic: 9 }, c.u32())   // explicit bits
+ *
+ * Reads give `{ iron: boolean, ... }`. Writes take that object or the raw
+ * integer. `toRaw` / `fromRaw` convert between the two. Unnamed bits read
+ * as nothing and are written as 0 (unless a raw integer is written).
+ */
+export class CBitfield<
+  const K extends BitfieldFlags,
+  T extends CNumeric,
+  const O extends FieldOptions = {},
+> extends CFieldType<BitfieldValue<K>, O> {
+  readonly flags: K;
+  readonly type: T;
+  private readonly layout: FlagLayout;
+
+  constructor(flags: K, type: T, options?: O) {
+    super(options);
+    this.layout = new FlagLayout(flags, type);
+    this.flags = flags;
     this.type = type;
+  }
+
+  /** The storage integer for a flags object. */
+  toRaw(flags: BitfieldValue<K>): RawOf<T> {
+    return this.layout.toRaw(flags) as RawOf<T>;
+  }
+
+  /** The flags object for a storage integer. */
+  fromRaw(raw: number | bigint): BitfieldValue<K> {
+    return this.layout.fromRaw(raw) as BitfieldValue<K>;
   }
 
   getSize(): number {
@@ -113,84 +211,87 @@ export class CBitfield<
   write(
     buffer: Uint8Array,
     offset: number,
-    value: BitfieldValue<K>,
+    value: BitfieldValue<K> | RawOf<T>,
     endian: Endian
   ): void {
     writeWith(this, buffer, offset, value, endian);
   }
 
   [COMPILE](env: CompileEnv): Codec<Record<string, boolean>> {
-    const { names, bits } = this;
-    const count = names.length;
-
-    if (this.type instanceof CBigint) {
-      // 64-bit storage: work on two 32-bit words to stay in number arithmetic.
-      const little = env.endian === "little";
-      const loAt = little ? 0 : 4;
-      const hiAt = little ? 4 : 0;
-      return {
-        read: (ctx, at) => {
-          const lo = ctx.dv.getUint32(at + loAt, little);
-          const hi = ctx.dv.getUint32(at + hiAt, little);
-          const out: Record<string, boolean> = {};
-          for (let i = 0; i < count; i++) {
-            const bit = bits[i];
-            const word = bit < 32 ? lo : hi;
-            out[names[i]] = ((word >>> (bit & 31)) & 1) === 1;
-          }
-          return out;
-        },
-        write: (ctx, at, value) => {
-          const flags = expectObject(value);
-          let lo = 0;
-          let hi = 0;
-          for (let i = 0; i < count; i++) {
-            if (flags[names[i]]) {
-              const bit = bits[i];
-              if (bit < 32) {
-                lo |= 1 << bit;
-              } else {
-                hi |= 1 << (bit - 32);
-              }
-            }
-          }
-          ctx.dv.setUint32(at + loAt, lo >>> 0, little);
-          ctx.dv.setUint32(at + hiAt, hi >>> 0, little);
-        },
-      };
-    }
-
-    // Bits are built to fit the storage width, so no range check is needed.
-    const storage = numericCodec(this.type, {
-      endian: env.endian,
-      checked: false,
-    }) as Codec<number>;
-    const width = this.type.getSize() * 8;
-    const signed = isSignedNumeric(this.type);
+    const layout = this.layout;
+    const storage = numericCodec(this.type, env);
     return {
-      read: (ctx, at) => {
-        const raw = storage.read(ctx, at, NO_PARENT);
-        const out: Record<string, boolean> = {};
-        for (let i = 0; i < count; i++) {
-          out[names[i]] = ((raw >>> bits[i]) & 1) === 1;
-        }
-        return out;
-      },
+      read: (ctx, at) => layout.fromRaw(storage.read(ctx, at, NO_PARENT)),
       write: (ctx, at, value) => {
-        const flags = expectObject(value);
-        let raw = 0;
-        for (let i = 0; i < count; i++) {
-          if (flags[names[i]]) {
-            raw |= 1 << bits[i];
-          }
-        }
-        storage.write(
-          ctx,
-          at,
-          signed ? toSigned(raw, width) : raw >>> 0,
-          NO_PARENT
-        );
+        const raw = isRaw(value)
+          ? layout.normalizeRaw(value)
+          : layout.toRaw(value);
+        storage.write(ctx, at, raw, NO_PARENT);
       },
     };
+  }
+}
+
+/**
+ * Flags as the plain storage integer, the way C code holds them
+ * (`uint32_t skulls` with `#define` masks). `mask` gives each flag's bit:
+ *
+ *   const Skulls = c.bitfield(["iron", "black_eye"], c.u32());
+ *   if (record.skulls & Skulls.mask.iron) { ... }
+ *
+ * Use `c.Bitfield` to read flags as an object of booleans instead.
+ */
+export class CBitmask<
+  const K extends BitfieldFlags,
+  T extends CNumeric,
+  const O extends FieldOptions = {},
+> extends CFieldType<RawOf<T>, O> {
+  readonly flags: K;
+  readonly type: T;
+  /** Each flag's mask, as the storage integer type. */
+  readonly mask: { readonly [Name in keyof BitfieldValue<K>]: RawOf<T> };
+  private readonly layout: FlagLayout;
+
+  constructor(flags: K, type: T, options?: O) {
+    super(options);
+    this.layout = new FlagLayout(flags, type);
+    this.flags = flags;
+    this.type = type;
+    this.mask = this.layout.masks() as CBitmask<K, T, O>["mask"];
+  }
+
+  /** The flags object for a storage integer. */
+  toFlags(raw: number | bigint): BitfieldValue<K> {
+    return this.layout.fromRaw(raw) as BitfieldValue<K>;
+  }
+
+  /** The storage integer for a flags object. */
+  fromFlags(flags: BitfieldValue<K>): RawOf<T> {
+    return this.layout.toRaw(flags) as RawOf<T>;
+  }
+
+  getSize(): number {
+    return this.type.getSize();
+  }
+
+  getAlign(): number {
+    return this.type.getAlign();
+  }
+
+  read(buffer: Uint8Array, offset: number, endian: Endian): RawOf<T> {
+    return readWith(this, buffer, offset, endian);
+  }
+
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: RawOf<T>,
+    endian: Endian
+  ): void {
+    writeWith(this, buffer, offset, value, endian);
+  }
+
+  [COMPILE](env: CompileEnv): Codec<number | bigint> {
+    return numericCodec(this.type, env);
   }
 }

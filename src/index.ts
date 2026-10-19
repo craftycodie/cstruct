@@ -14,6 +14,7 @@ export {
 export {
   CBigint,
   CBitfield,
+  CBitmask,
   CBits,
   CBool,
   CBytes,

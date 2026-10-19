@@ -9,6 +9,7 @@ import {
   bool as boolField,
   bytes as bytesField,
   CBitfield,
+  CBitmask,
   CEnum,
   CMagicNumber,
   CMagicString,
@@ -101,15 +102,28 @@ export function MagicString<
 }
 
 /**
- * Boolean flags in an integer: a list of names (bit = index) or a map of
- * name to bit number.
+ * Flags as the plain storage integer, like C's `uint32_t flags` with
+ * `#define` masks; `.mask` gives each flag's bit. Flags are a list of names
+ * (bit = index) or a map of name to bit number.
  */
 export function bitfield<
   const K extends BitfieldFlags,
   PT extends CNumeric,
   const O extends IFieldOptions = {},
->(keys: K, type: PT, options?: O) {
-  return new CBitfield(keys, type, options);
+>(flags: K, type: PT, options?: O) {
+  return new CBitmask(flags, type, options);
+}
+
+/**
+ * Flags as an object of booleans (a cstruct extension of `c.bitfield`).
+ * Writes also accept the raw integer; `toRaw` / `fromRaw` convert.
+ */
+export function Bitfield<
+  const K extends BitfieldFlags,
+  PT extends CNumeric,
+  const O extends IFieldOptions = {},
+>(flags: K, type: PT, options?: O) {
+  return new CBitfield(flags, type, options);
 }
 
 /** C enum stored as `type`; decodes to the key names. Unknown values throw. */
@@ -128,9 +142,6 @@ export function union<
 >(members: S, options?: O) {
   return new CUnion(members, options);
 }
-
-/** @deprecated Use `c.bitfield`: lowercase names are C-native types. */
-export const Bitfield = bitfield;
 
 /** @deprecated Use `c.enum`: lowercase names are C-native types. */
 export const Enum = enumField;

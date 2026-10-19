@@ -78,7 +78,8 @@ Lowercase factories are C-native types; capitalized ones are cstruct extensions 
 | `c.pad(n)` | Reserved zero bytes |
 | `c.array(element, count)` | Fixed-length array |
 | `c.enum(map \| keys, storage)` | Enum decoded to key names |
-| `c.bitfield(keys, storage)` | One boolean per bit |
+| `c.bitfield(flags, storage)` | Flags as the storage integer, with `.mask` |
+| `c.Bitfield(flags, storage)` | Flags as `{ flag: boolean }`, with `toRaw` / `fromRaw` |
 | `c.bits(spec, storage)` | Multi-bit C bit-fields |
 | `c.union({ ... })` | Overlapping C union |
 | `c.match(path, arms, options?)` | Union whose arm is chosen by a discriminant field |
@@ -89,7 +90,7 @@ Lowercase factories are C-native types; capitalized ones are cstruct extensions 
 | `c.MagicString(value)` | String constant, checked on read |
 | `c.class(Ctor, options?)` | Embed a `@c.class()` type in a schema |
 
-Deprecated aliases: `c.String`, `c.WString`, `c.Enum`, `c.Bitfield`, `c.Union`, `c.Pad`.
+Deprecated aliases: `c.String`, `c.WString`, `c.Enum`, `c.Union`, `c.Pad`.
 
 ## Modifiers
 

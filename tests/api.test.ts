@@ -8,20 +8,23 @@ describe("naming", () => {
       wide: c.wstring(2),
       kind: c.enum({ A: 1, B: 2 }, c.u8()),
       flags: c.bitfield(["x", "y"], c.u8()),
+      named: c.Bitfield(["x", "y"], c.u8()),
       either: c.union({ word: c.struct({ v: c.u16() }) }),
     });
     const bytes = c.write(Schema, {
       name: "ab",
       wide: "z",
       kind: "B",
-      flags: { x: true, y: false },
+      flags: 0b01,
+      named: { x: true, y: false },
       either: { word: { v: 7 } },
     });
     expect(c.read(Schema, bytes)).toMatchObject({
       name: "ab",
       wide: "z",
       kind: "B",
-      flags: { x: true, y: false },
+      flags: 1,
+      named: { x: true, y: false },
       either: { word: { v: 7 } },
     });
   });

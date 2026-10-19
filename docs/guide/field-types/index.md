@@ -9,12 +9,13 @@ A field type occupies one slot in a struct. Pass a factory result (`c.string(16)
 | `c.wstring(n)` | `string` | [Wide string](./wstring.md) |
 | `c.bytes(n)` | `Buffer` | [Bytes](./bytes.md) |
 | `c.Time64()` | `Date` | [Unix time](./time64.md) |
-| `c.bitfield(keys, storage)` | `{ [key]: boolean }` | [Bitfield](./bitfield.md) |
+| `c.bitfield(flags, storage)` | storage integer | [Bitfields](./bitfield.md) |
+| `c.Bitfield(flags, storage)` | `{ [flag]: boolean }` | [Bitfields](./bitfield.md) |
 | `c.bits(spec, storage)` | `{ [field]: number }` | [Bit-fields](./bits.md) |
 | `c.MagicNumber(n, storage)` / `c.MagicString(s)` | the constant | [Magic fields](./magic.md) |
 | `c.enum(map, storage)` | key names | [Enums](../enums.md) |
 
-Each factory has a class exported from the package root (`CBool`, `CString`, `CWString`, `CBytes`, `time64_t`, `CBitfield`, `CBits`, `CMagicNumber`, `CMagicString`, `CEnum`) for `instanceof` checks.
+Each factory has a class exported from the package root (`CBool`, `CString`, `CWString`, `CBytes`, `time64_t`, `CBitmask`, `CBitfield`, `CBits`, `CMagicNumber`, `CMagicString`, `CEnum`) for `instanceof` checks.
 
 ## Full struct example
 
