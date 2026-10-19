@@ -1,6 +1,6 @@
 # Bitfield — `c.bitfield(keys, storage)`
 
-Flag groups packed into an integer primitive. Each flag is a **boolean** on read/write; cstruct packs them into **sequential** bit indices inside the storage width (`c.u8()`, `c.u32()`, …).
+Flag groups packed into an integer. Each flag is a **boolean** on read and write. Bits come from list position or from an explicit map, never from object key order.
 
 ## Sequential flags
 
@@ -47,6 +47,27 @@ typedef struct {
 
 /* iron + tough_luck set: skulls == 0x5 */
 ```
+
+## Explicit bits
+
+Map each flag to its bit number when bits are sparse or not in order:
+
+```ts
+const Difficulty = c.bitfield(
+  { easy: 0, normal: 1, heroic: 2, legendary: 3, mythic: 9 },
+  c.u16()
+);
+```
+
+```c
+#define DIFF_EASY      (1u << 0)
+#define DIFF_NORMAL    (1u << 1)
+#define DIFF_HEROIC    (1u << 2)
+#define DIFF_LEGENDARY (1u << 3)
+#define DIFF_MYTHIC    (1u << 9)
+```
+
+The map's key order does not matter, so a definition loaded from JSON (where key order is not guaranteed) has the same layout. Two flags on the same bit, or a bit past the storage width, throw when the field type is created.
 
 ## Reserved bits
 

@@ -16,6 +16,7 @@ Performance, a zod-style API, C layout support and decorator fixes.
 
 - Lowercase C-native factories: `c.string`, `c.wstring`, `c.enum`, `c.bitfield`, `c.union`.
 - `c.bits(spec, storage)` for multi-bit C bit-fields, and `c.bytes(n)` for raw bytes.
+- `c.bitfield({ name: bit }, storage)`: explicit flag bits again, as in 1.x ([#1](https://github.com/craftycodie/cstruct/issues/1)). Bitfield and bit-field layouts never depend on object key order, so definitions loaded from JSON keep their layout.
 - `c.match(path, arms, { size, fallback })`: tagged unions keyed by a field path, no casts needed.
 - Modifiers on every field type, struct and array: `.array(n)`, `.padBefore(n)`, `.padAfter(n)`, `.be()`, `.le()`, `.default(v)`, `.transform(decode, encode)`, `.assert(check, message)`.
 - `c.input<T>` (write type: padding omitted; magic, unions and defaults optional) and `c.output<T>`.

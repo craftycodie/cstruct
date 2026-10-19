@@ -2,6 +2,7 @@ import { CArray } from "./array";
 import type { FieldOptions as IFieldOptions, StructFieldValue } from "./field";
 import type { Endian as EndianType } from "./field-type";
 import {
+  type BitfieldFlags,
   i64 as bigintI64,
   u64 as bigintU64,
   bits as bitsField,
@@ -99,9 +100,12 @@ export function MagicString<
   return new CMagicString(magic, options);
 }
 
-/** One boolean flag per bit, from the least significant bit up. */
+/**
+ * Boolean flags in an integer: a list of names (bit = index) or a map of
+ * name to bit number.
+ */
 export function bitfield<
-  const K extends readonly string[],
+  const K extends BitfieldFlags,
   PT extends CNumeric,
   const O extends IFieldOptions = {},
 >(keys: K, type: PT, options?: O) {

@@ -89,10 +89,24 @@ describe("C struct layout", () => {
 
 describe("c.bits", () => {
   const Flags32 = c.struct({
-    bits: c.bits({ mode: 3, flags: 5, rest: 24 }, c.u32()),
+    bits: c.bits(
+      [
+        ["mode", 3],
+        ["flags", 5],
+        ["rest", 24],
+      ],
+      c.u32()
+    ),
   });
   const Flags64 = c.struct({
-    bits: c.bits({ a: 30, b: 10, c: 24 }, c.u64()),
+    bits: c.bits(
+      [
+        ["a", 30],
+        ["b", 10],
+        ["c", 24],
+      ],
+      c.u64()
+    ),
   });
 
   // Byte images from clang (see the bit-field structs in c-layouts.c).
@@ -118,14 +132,64 @@ describe("c.bits", () => {
     ).toEqual(value);
   });
 
+  it("places fields at explicit bits regardless of key order (issue #1)", () => {
+    const explicit = c.struct({
+      bits: c.bits(
+        {
+          rest: { bit: 8, width: 24 },
+          mode: { bit: 0, width: 3 },
+          flags: { bit: 3, width: 5 },
+        },
+        c.u32()
+      ),
+    });
+    const value = { bits: { flags: 17, rest: 3, mode: 5 } };
+    expect([...c.write(explicit, value)]).toEqual([0x8d, 0x03, 0, 0]);
+    expect([...c.write(explicit, value)]).toEqual([...c.write(Flags32, value)]);
+  });
+
+  it("keeps its layout when the definition goes through JSON", () => {
+    // Integer-like keys are always enumerated first, and JSON stores such as
+    // Postgres jsonb sort keys, so definitions must not rely on key order.
+    const spec = JSON.parse(
+      '{"2": {"bit": 0, "width": 4}, "1": {"bit": 4, "width": 4}}'
+    ) as Record<string, { bit: number; width: number }>;
+    expect(Object.keys(spec)).toEqual(["1", "2"]);
+    const Reordered = c.struct({ bits: c.bits(spec, c.u8()) });
+    expect([...c.write(Reordered, { bits: { 1: 0xa, 2: 0x5 } })]).toEqual([
+      0xa5,
+    ]);
+
+    const list = JSON.parse('[["low", 4], ["high", 4]]');
+    const FromList = c.struct({ bits: c.bits(list, c.u8()) });
+    expect([...c.write(FromList, { bits: { high: 0xa, low: 0x5 } })]).toEqual([
+      0xa5,
+    ]);
+  });
+
+  it("allows gaps between explicit fields", () => {
+    const Sparse = c.struct({
+      bits: c.bits({ top: { bit: 6, width: 2 } }, c.u8()),
+    });
+    expect([...c.write(Sparse, { bits: { top: 3 } })]).toEqual([0xc0]);
+  });
+
   it("reads full-width fields as unsigned", () => {
-    const Wide = c.struct({ bits: c.bits({ all: 32 }, c.u32()) });
+    const Wide = c.struct({ bits: c.bits([["all", 32]], c.u32()) });
     const bytes = c.write(Wide, { bits: { all: 0xffffffff } });
     expect(c.read(Wide, bytes).bits.all).toBe(0xffffffff);
   });
 
   it("works over signed storage", () => {
-    const Signed = c.struct({ bits: c.bits({ low: 4, high: 4 }, c.i8()) });
+    const Signed = c.struct({
+      bits: c.bits(
+        [
+          ["low", 4],
+          ["high", 4],
+        ],
+        c.i8()
+      ),
+    });
     const bytes = c.write(Signed, { bits: { low: 1, high: 15 } });
     expect(bytes[0]).toBe(0xf1);
     expect(c.read(Signed, bytes).bits).toEqual({ low: 1, high: 15 });
@@ -144,18 +208,42 @@ describe("c.bits", () => {
   });
 
   it("validates the spec", () => {
-    expect(() => c.bits({ a: 0 }, c.u8())).toThrow(
+    expect(() => c.bits([["a", 0]], c.u8())).toThrow(
       "bit-field 'a' width must be an integer from 1 to 32, got 0"
     );
-    expect(() => c.bits({ a: 5, b: 4 }, c.u8())).toThrow(
-      "bit-fields need 9 bits but u8 storage holds 8"
+    expect(() =>
+      c.bits(
+        [
+          ["a", 5],
+          ["b", 4],
+        ],
+        c.u8()
+      )
+    ).toThrow("bit-field 'b' needs bits 5..8 but u8 storage holds 8");
+    expect(() =>
+      c.bits({ a: { bit: 0, width: 4 }, b: { bit: 3, width: 2 } }, c.u8())
+    ).toThrow("bit-fields 'a' and 'b' overlap");
+    expect(() =>
+      c.bits(
+        [
+          ["a", 1],
+          ["a", 1],
+        ],
+        c.u8()
+      )
+    ).toThrow("bit-field 'a' is declared more than once");
+    expect(() => c.bits({ a: 3 } as never, c.u8())).toThrow(
+      "bit-field 'a' must be { bit, width }; use a [name, width] list for sequential fields"
     );
   });
 
-  it("infers number fields", () => {
+  it("infers number fields from either form", () => {
     const value: c.infer<typeof Flags32> = {
       bits: { mode: 1, flags: 2, rest: 3 },
     };
     expect(value.bits.mode).toBe(1);
+    const explicit = c.bits({ x: { bit: 1, width: 2 } }, c.u8());
+    const decoded: c.infer<typeof explicit> = { x: 1 };
+    expect(decoded.x).toBe(1);
   });
 });

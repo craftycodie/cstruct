@@ -18,28 +18,83 @@ function toSigned(value: number, bits: number): number {
   return (value << shift) >> shift;
 }
 
-export class CBitfield<
-  const K extends readonly string[],
-  T extends CNumeric,
-  const O extends FieldOptions = {},
-> extends CFieldType<
-  {
-    [Key in K[number]]: boolean;
-  },
-  O
-> {
-  private readonly keys: readonly string[];
-  private readonly type: T;
+/**
+ * Flag definitions, in a form whose meaning never depends on object key
+ * order: a list of names (bit = index) or a map of name to bit number.
+ */
+export type BitfieldFlags =
+  | readonly string[]
+  | Readonly<Record<string, number>>;
 
-  constructor(keys: K, type: T, options?: O) {
-    super(options);
-    const capacity = type.getSize() * 8;
-    if (keys.length > capacity) {
-      throw new Error(
-        `Bitfield has ${keys.length} flags but ${type.kind} storage holds ${capacity}`
+export type BitfieldValue<K extends BitfieldFlags> = K extends readonly string[]
+  ? { [Key in K[number]]: boolean }
+  : { [Key in keyof K & string]: boolean };
+
+/** Normalize flags to parallel name/bit lists, checking bits are valid. */
+function parseFlags(
+  flags: BitfieldFlags,
+  capacity: number,
+  kind: string
+): { names: string[]; bits: number[] } {
+  const entries: [string, number][] = Array.isArray(flags)
+    ? (flags as readonly string[]).map((name, bit) => [name, bit])
+    : Object.entries(flags as Record<string, number>);
+  const used = new Map<number, string>();
+  for (const [name, bit] of entries) {
+    if (!Number.isInteger(bit) || bit < 0) {
+      throw new RangeError(
+        `Bitfield flag '${name}' must use a non-negative integer bit, got ${bit}`
       );
     }
-    this.keys = keys;
+    if (bit >= capacity) {
+      throw new RangeError(
+        `Bitfield flag '${name}' uses bit ${bit} but ${kind} storage holds ${capacity} bits`
+      );
+    }
+    const other = used.get(bit);
+    if (other !== undefined) {
+      throw new Error(
+        `Bitfield flags '${other}' and '${name}' share bit ${bit}`
+      );
+    }
+    used.set(bit, name);
+  }
+  return {
+    names: entries.map(([name]) => name),
+    bits: entries.map(([, bit]) => bit),
+  };
+}
+
+/**
+ * Boolean flags packed into an integer:
+ *
+ *   c.bitfield(["iron", "black_eye"], c.u32())    // bits 0 and 1
+ *   c.bitfield({ iron: 0, mythic: 9 }, c.u32())   // explicit bits
+ *
+ * Bits not named read as nothing and are written as 0.
+ */
+export class CBitfield<
+  const K extends BitfieldFlags,
+  T extends CNumeric,
+  const O extends FieldOptions = {},
+> extends CFieldType<BitfieldValue<K>, O> {
+  readonly flags: K;
+  private readonly names: string[];
+  private readonly bits: number[];
+  private readonly type: T;
+
+  constructor(flags: K, type: T, options?: O) {
+    super(options);
+    const capacity = type.getSize() * 8;
+    if (Array.isArray(flags) && flags.length > capacity) {
+      throw new Error(
+        `Bitfield has ${flags.length} flags but ${type.kind} storage holds ${capacity}`
+      );
+    }
+    const parsed = parseFlags(flags, capacity, type.kind);
+    this.flags = flags;
+    this.names = parsed.names;
+    this.bits = parsed.bits;
     this.type = type;
   }
 
@@ -51,28 +106,22 @@ export class CBitfield<
     return this.type.getAlign();
   }
 
-  read(
-    buffer: Uint8Array,
-    offset: number,
-    endian: Endian
-  ): {
-    [Key in K[number]]: boolean;
-  } {
+  read(buffer: Uint8Array, offset: number, endian: Endian): BitfieldValue<K> {
     return readWith(this, buffer, offset, endian);
   }
 
   write(
     buffer: Uint8Array,
     offset: number,
-    value: { [Key in K[number]]: boolean },
+    value: BitfieldValue<K>,
     endian: Endian
   ): void {
     writeWith(this, buffer, offset, value, endian);
   }
 
   [COMPILE](env: CompileEnv): Codec<Record<string, boolean>> {
-    const keys = this.keys;
-    const count = keys.length;
+    const { names, bits } = this;
+    const count = names.length;
 
     if (this.type instanceof CBigint) {
       // 64-bit storage: work on two 32-bit words to stay in number arithmetic.
@@ -85,8 +134,9 @@ export class CBitfield<
           const hi = ctx.dv.getUint32(at + hiAt, little);
           const out: Record<string, boolean> = {};
           for (let i = 0; i < count; i++) {
-            const word = i < 32 ? lo : hi;
-            out[keys[i]] = ((word >>> (i & 31)) & 1) === 1;
+            const bit = bits[i];
+            const word = bit < 32 ? lo : hi;
+            out[names[i]] = ((word >>> (bit & 31)) & 1) === 1;
           }
           return out;
         },
@@ -95,11 +145,12 @@ export class CBitfield<
           let lo = 0;
           let hi = 0;
           for (let i = 0; i < count; i++) {
-            if (flags[keys[i]]) {
-              if (i < 32) {
-                lo |= 1 << i;
+            if (flags[names[i]]) {
+              const bit = bits[i];
+              if (bit < 32) {
+                lo |= 1 << bit;
               } else {
-                hi |= 1 << (i - 32);
+                hi |= 1 << (bit - 32);
               }
             }
           }
@@ -118,25 +169,25 @@ export class CBitfield<
     const signed = isSignedNumeric(this.type);
     return {
       read: (ctx, at) => {
-        const bits = storage.read(ctx, at, NO_PARENT);
+        const raw = storage.read(ctx, at, NO_PARENT);
         const out: Record<string, boolean> = {};
         for (let i = 0; i < count; i++) {
-          out[keys[i]] = ((bits >>> i) & 1) === 1;
+          out[names[i]] = ((raw >>> bits[i]) & 1) === 1;
         }
         return out;
       },
       write: (ctx, at, value) => {
         const flags = expectObject(value);
-        let bits = 0;
+        let raw = 0;
         for (let i = 0; i < count; i++) {
-          if (flags[keys[i]]) {
-            bits |= 1 << i;
+          if (flags[names[i]]) {
+            raw |= 1 << bits[i];
           }
         }
         storage.write(
           ctx,
           at,
-          signed ? toSigned(bits, width) : bits >>> 0,
+          signed ? toSigned(raw, width) : raw >>> 0,
           NO_PARENT
         );
       },

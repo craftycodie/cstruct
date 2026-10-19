@@ -13,9 +13,30 @@ import { CFieldType, type Endian } from "../field-type";
 import { CBigint } from "./bigint";
 import { type CNumeric, isSignedNumeric, numericCodec } from "./numeric";
 
-export type BitsSpec = Readonly<Record<string, number>>;
+/**
+ * Bit-field definitions, in a form whose meaning never depends on object
+ * key order (JSON and many stores reorder keys, and integer-like keys always
+ * sort first):
+ *
+ * - a list of `[name, width]` pairs, packed from bit 0 up in list order, or
+ * - a map of `name: { bit, width }` with explicit positions (gaps allowed).
+ */
+export type BitsSpec =
+  | readonly (readonly [name: string, width: number])[]
+  | Readonly<Record<string, { readonly bit: number; readonly width: number }>>;
 
-export type BitsValue<S extends BitsSpec> = { [K in keyof S]: number };
+export type BitsValue<S extends BitsSpec> = S extends readonly (readonly [
+  infer _Name,
+  number,
+])[]
+  ? { [K in S[number][0] & string]: number }
+  : { [K in keyof S & string]: number };
+
+interface BitRange {
+  name: string;
+  shift: number;
+  width: number;
+}
 
 /** Sign-extend the low `bits` bits of `value` (for signed storage types). */
 function toSigned(value: number, bits: number): number {
@@ -28,11 +49,71 @@ function maskOf(width: number): number {
   return width === 32 ? 0xff_ff_ff_ff : (1 << width) - 1;
 }
 
+/** Normalize a spec to explicit ranges, checking names, widths and overlaps. */
+function parseBitsSpec(spec: BitsSpec, capacity: number, kind: string) {
+  const ranges: BitRange[] = [];
+  if (Array.isArray(spec)) {
+    let shift = 0;
+    for (const entry of spec as readonly (readonly [string, number])[]) {
+      if (!Array.isArray(entry) || typeof entry[0] !== "string") {
+        throw new TypeError("c.bits list entries must be [name, width] pairs");
+      }
+      ranges.push({ name: entry[0], shift, width: entry[1] });
+      shift += entry[1];
+    }
+  } else if (typeof spec === "object" && spec !== null) {
+    for (const [name, range] of Object.entries(spec)) {
+      if (typeof range !== "object" || range === null) {
+        throw new TypeError(
+          `bit-field '${name}' must be { bit, width }; use a [name, width] list for sequential fields`
+        );
+      }
+      ranges.push({ name, shift: range.bit, width: range.width });
+    }
+  }
+
+  const seen = new Set<string>();
+  for (const { name, shift, width } of ranges) {
+    if (seen.has(name)) {
+      throw new Error(`bit-field '${name}' is declared more than once`);
+    }
+    seen.add(name);
+    if (!Number.isInteger(width) || width < 1 || width > 32) {
+      throw new RangeError(
+        `bit-field '${name}' width must be an integer from 1 to 32, got ${width}`
+      );
+    }
+    if (!Number.isInteger(shift) || shift < 0) {
+      throw new RangeError(
+        `bit-field '${name}' bit must be a non-negative integer, got ${shift}`
+      );
+    }
+    if (shift + width > capacity) {
+      throw new RangeError(
+        `bit-field '${name}' needs bits ${shift}..${shift + width - 1} but ${kind} storage holds ${capacity}`
+      );
+    }
+  }
+  const ordered = [...ranges].sort((a, b) => a.shift - b.shift);
+  for (let i = 1; i < ordered.length; i++) {
+    const previous = ordered[i - 1];
+    if (ordered[i].shift < previous.shift + previous.width) {
+      throw new RangeError(
+        `bit-fields '${previous.name}' and '${ordered[i].name}' overlap`
+      );
+    }
+  }
+  return ranges;
+}
+
 /**
- * C bit-fields packed into one storage unit, e.g.
- * `c.bits({ mode: 3, flags: 5 }, c.u8())` for `uint8_t mode : 3, flags : 5;`.
- * Fields are assigned from the least significant bit up, as GCC, Clang and
- * MSVC do on little-endian targets. Values are unsigned, 1 to 32 bits wide.
+ * C bit-fields packed into one storage unit:
+ *
+ *   c.bits([["mode", 3], ["flags", 5]], c.u8())  // uint8_t mode : 3, flags : 5;
+ *   c.bits({ mode: { bit: 0, width: 3 }, flags: { bit: 3, width: 5 } }, c.u8())
+ *
+ * Bit 0 is the least significant bit, as GCC, Clang and MSVC assign
+ * bit-fields on little-endian targets. Values are unsigned, 1 to 32 bits.
  */
 export class CBits<
   const S extends BitsSpec,
@@ -41,35 +122,18 @@ export class CBits<
 > extends CFieldType<BitsValue<S>, O> {
   readonly spec: S;
   readonly type: T;
-  private readonly names: string[];
-  private readonly shifts: number[];
-  private readonly widths: number[];
+  readonly names: string[];
+  readonly shifts: number[];
+  readonly widths: number[];
 
   constructor(spec: S, type: T, options?: O) {
     super(options);
     this.spec = spec;
     this.type = type;
-    this.names = Object.keys(spec);
-    this.shifts = [];
-    this.widths = [];
-    const capacity = type.getSize() * 8;
-    let shift = 0;
-    for (const name of this.names) {
-      const width = spec[name];
-      if (!Number.isInteger(width) || width < 1 || width > 32) {
-        throw new RangeError(
-          `bit-field '${name}' width must be an integer from 1 to 32, got ${width}`
-        );
-      }
-      this.shifts.push(shift);
-      this.widths.push(width);
-      shift += width;
-    }
-    if (shift > capacity) {
-      throw new RangeError(
-        `bit-fields need ${shift} bits but ${type.kind} storage holds ${capacity}`
-      );
-    }
+    const ranges = parseBitsSpec(spec, type.getSize() * 8, type.kind);
+    this.names = ranges.map((range) => range.name);
+    this.shifts = ranges.map((range) => range.shift);
+    this.widths = ranges.map((range) => range.width);
   }
 
   getSize(): number {
