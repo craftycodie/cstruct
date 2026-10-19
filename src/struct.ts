@@ -1,6 +1,5 @@
 import { isCArray } from "./array";
 import type { Chainable } from "./chain";
-import type { ClassCtor } from "./class";
 import { COMPILE, type CompileEnv, envFor, ownCodec } from "./engine/codec";
 import { type BytesLike, checkRange, createCtx } from "./engine/ctx";
 import { compileStruct, type StructPlan } from "./engine/plan";
@@ -37,12 +36,7 @@ import {
   type WriteOptions,
 } from "./options";
 import type { CDiscriminatedUnion, UnionOfArms } from "./unions";
-import type {
-  BuiltinObject,
-  FlattenIntersection,
-  Tuple,
-  UnionToIntersection,
-} from "./utils";
+import type { FlattenIntersection, Tuple, UnionToIntersection } from "./utils";
 
 export type StructFields = Record<string, StructFieldValue>;
 
@@ -99,19 +93,8 @@ type ElementFieldType<T> =
 
 /** Data properties of a class instance (methods dropped). */
 type ClassData<I> = {
-  [K in keyof I as I[K] extends (...args: any[]) => any ? never : K]: DataOf<
-    I[K]
-  >;
+  [K in keyof I as I[K] extends (...args: any[]) => any ? never : K]: I[K];
 };
-
-/** A value with methods dropped at every level (class instances as data). */
-type DataOf<T> = T extends BuiltinObject | null | undefined
-  ? T
-  : T extends readonly unknown[]
-    ? { [K in keyof T]: DataOf<T[K]> }
-    : T extends object
-      ? ClassData<T>
-      : T;
 
 type ProcessSchemaField<K extends string, F extends StructFieldValue> =
   IsAny<F> extends true
@@ -451,28 +434,26 @@ type InferType<T> =
     ? StructSchemaToTS<F>
     : T extends CClassField<any, any, infer I>
       ? I
-      : T extends ClassCtor<infer I>
-        ? I
-        : NestedStructSchema<T> extends never
-          ? T extends {
-              readonly __carray: true;
-              readonly element: infer ET;
-              readonly count: infer N extends number;
-            }
-            ? number extends N
-              ? InferType<ET>[]
-              : Tuple<InferType<ET>, N>
-            : T extends {
-                  readonly __cdiscriminatedUnion: true;
-                  readonly arms: infer Arms;
-                }
-              ? Arms extends readonly import("./unions").UnionArmInput[]
-                ? UnionOfArms<Arms> | null
-                : never
-              : T extends FieldType
-                ? FieldValueType<T>
-                : never
-          : NestedStructSchema<T>;
+      : NestedStructSchema<T> extends never
+        ? T extends {
+            readonly __carray: true;
+            readonly element: infer ET;
+            readonly count: infer N extends number;
+          }
+          ? number extends N
+            ? InferType<ET>[]
+            : Tuple<InferType<ET>, N>
+          : T extends {
+                readonly __cdiscriminatedUnion: true;
+                readonly arms: infer Arms;
+              }
+            ? Arms extends readonly import("./unions").UnionArmInput[]
+              ? UnionOfArms<Arms> | null
+              : never
+            : T extends FieldType
+              ? FieldValueType<T>
+              : never
+        : NestedStructSchema<T>;
 
 export type UnionOf<Arms extends readonly import("./unions").UnionArmInput[]> =
   UnionOfArms<Arms>;
@@ -537,31 +518,29 @@ type InputType<T> =
       ? StructInput<F>
       : T extends CClassField<any, any, infer I>
         ? FlattenIntersection<ClassData<I>>
-        : T extends ClassCtor<infer I>
-          ? FlattenIntersection<ClassData<I>>
-          : T extends { readonly struct: infer S }
-            ? InputType<S>
+        : T extends { readonly struct: infer S }
+          ? InputType<S>
+          : T extends {
+                readonly __cstructAnnotatedField: true;
+                readonly field: infer Inner;
+              }
+            ? InputType<Inner>
             : T extends {
-                  readonly __cstructAnnotatedField: true;
-                  readonly field: infer Inner;
+                  readonly __carray: true;
+                  readonly element: infer E;
+                  readonly count: infer N extends number;
                 }
-              ? InputType<Inner>
+              ? ArrayInput<E, N>
               : T extends {
-                    readonly __carray: true;
-                    readonly element: infer E;
-                    readonly count: infer N extends number;
+                    readonly __cdiscriminatedUnion: true;
+                    readonly arms: infer Arms;
                   }
-                ? ArrayInput<E, N>
-                : T extends {
-                      readonly __cdiscriminatedUnion: true;
-                      readonly arms: infer Arms;
-                    }
-                  ? Arms extends readonly (readonly [infer S, any])[]
-                    ? InputType<S> | null
-                    : never
-                  : T extends CFieldType<any, any>
-                    ? WriteValue<T>
-                    : never;
+                ? Arms extends readonly (readonly [infer S, any])[]
+                  ? InputType<S> | null
+                  : never
+                : T extends CFieldType<any, any>
+                  ? WriteValue<T>
+                  : never;
 
 export function struct<const F extends StructFields>(
   fields: F,

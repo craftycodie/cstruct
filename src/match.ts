@@ -1,4 +1,3 @@
-import { type ClassCtor, getClassStruct, isClassCtor } from "./class";
 import {
   COMPILE,
   type Codec,
@@ -12,18 +11,12 @@ import type { FieldOptions, FieldType } from "./field";
 import { alignOf, CFieldType, type Endian } from "./field-type";
 import type { infer as Infer } from "./struct";
 
-/** A `c.match` arm: a field type, usually a struct, or a `@c.class()` class. */
-export type MatchArm = FieldType | ClassCtor;
+/** Arm schemas keyed by discriminant value (numbers, enum keys, strings). */
+export type MatchArms = Readonly<Record<string | number, FieldType>>;
 
-/** Arms keyed by discriminant value (numbers, enum keys, strings). */
-export type MatchArms = Readonly<Record<string | number, MatchArm>>;
-
-function resolveArm(arm: MatchArm): FieldType {
-  return isClassCtor(arm) ? (getClassStruct(arm) as unknown as FieldType) : arm;
-}
-
-export interface MatchOptions<Fallback extends MatchArm | undefined = undefined>
-  extends FieldOptions {
+export interface MatchOptions<
+  Fallback extends FieldType | undefined = undefined,
+> extends FieldOptions {
   /** Arm used when the discriminant matches no key. Default: decode as null. */
   fallback?: Fallback;
   /** Slot size in bytes. Default: the largest arm (and fallback). */
@@ -32,10 +25,10 @@ export interface MatchOptions<Fallback extends MatchArm | undefined = undefined>
 
 export type MatchValue<
   Arms extends MatchArms,
-  Fallback extends MatchArm | undefined,
+  Fallback extends FieldType | undefined,
 > =
   | { [K in keyof Arms]: Infer<Arms[K]> }[keyof Arms]
-  | (Fallback extends MatchArm ? Infer<Fallback> : null);
+  | (Fallback extends FieldType ? Infer<Fallback> : null);
 
 const PATH_SEPARATOR = ".";
 
@@ -51,7 +44,7 @@ const PATH_SEPARATOR = ".";
  */
 export class CMatch<
   const Arms extends MatchArms,
-  const Fallback extends MatchArm | undefined = undefined,
+  const Fallback extends FieldType | undefined = undefined,
   const O extends MatchOptions<Fallback> = MatchOptions<Fallback>,
 > extends CFieldType<MatchValue<Arms, Fallback>, O> {
   readonly path: string;
@@ -78,9 +71,9 @@ export class CMatch<
   }
 
   private armTypes(): FieldType[] {
-    const types = this.keys.map((key) => resolveArm(this.arms[key]));
+    const types = this.keys.map((key) => this.arms[key]);
     const fallback = this.options.fallback;
-    return fallback ? [...types, resolveArm(fallback)] : types;
+    return fallback ? [...types, fallback] : types;
   }
 
   getSize(): number {
@@ -121,11 +114,10 @@ export class CMatch<
       return value;
     };
     const indexByKey = new Map(keys.map((key, i) => [key, i]));
-    const armTypes = keys.map((key) => resolveArm(this.arms[key]));
+    const armTypes = keys.map((key) => this.arms[key]);
     const codecs = armTypes.map((type) => compileType(type, env));
     const sizes = armTypes.map((type) => type.getSize());
-    const fallbackType =
-      this.options.fallback && resolveArm(this.options.fallback);
+    const fallbackType = this.options.fallback;
     const fallback = fallbackType
       ? { codec: compileType(fallbackType, env), size: fallbackType.getSize() }
       : undefined;
@@ -164,7 +156,7 @@ export class CMatch<
 
 export function match<
   const Arms extends MatchArms,
-  const Fallback extends MatchArm | undefined = undefined,
+  const Fallback extends FieldType | undefined = undefined,
 >(
   path: string,
   arms: Arms,

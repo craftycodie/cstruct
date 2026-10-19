@@ -24,7 +24,7 @@ export type FlattenIntersection<T> = T extends BuiltinObject
     : T;
 
 /** Object types kept as-is by FlattenIntersection (mapping them loses methods). */
-export type BuiltinObject =
+type BuiltinObject =
   | ArrayBuffer
   | ArrayBufferView
   | Date
