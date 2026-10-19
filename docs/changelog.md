@@ -15,7 +15,7 @@ Performance, a zod-style API, C layout support and decorator fixes.
 ### Added
 
 - Lowercase C-native factories: `c.string`, `c.wstring`, `c.enum`, `c.union`.
-- `c.bitfield(flags, storage)`: flags as the plain storage integer, the C way, with `.mask` per flag. `c.Bitfield` stays the flag-object form and gains `toRaw` / `fromRaw` and raw-integer writes ([#1](https://github.com/craftycodie/cstruct/issues/1)).
+- `c.Bitfield` gains `toRaw` / `fromRaw` and accepts a raw integer on write, for interop with code that holds flags as a number ([#1](https://github.com/craftycodie/cstruct/issues/1)). It is no longer deprecated: flag objects are a cstruct extension, so the capitalized name is the canonical one.
 - `c.bits(spec, storage)` for multi-bit C bit-fields, and `c.bytes(n)` for raw bytes.
 - Bitfields accept an explicit `{ name: bit }` map again, as in 1.x ([#1](https://github.com/craftycodie/cstruct/issues/1)). Bitfield and bit-field layouts never depend on object key order, so definitions loaded from JSON keep their layout.
 - `c.match(path, arms, { size, fallback })`: tagged unions keyed by a field path, no casts needed.

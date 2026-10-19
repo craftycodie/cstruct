@@ -9,7 +9,6 @@ import {
   bool as boolField,
   bytes as bytesField,
   CBitfield,
-  CBitmask,
   CEnum,
   CMagicNumber,
   CMagicString,
@@ -102,20 +101,8 @@ export function MagicString<
 }
 
 /**
- * Flags as the plain storage integer, like C's `uint32_t flags` with
- * `#define` masks; `.mask` gives each flag's bit. Flags are a list of names
- * (bit = index) or a map of name to bit number.
- */
-export function bitfield<
-  const K extends BitfieldFlags,
-  PT extends CNumeric,
-  const O extends IFieldOptions = {},
->(flags: K, type: PT, options?: O) {
-  return new CBitmask(flags, type, options);
-}
-
-/**
- * Flags as an object of booleans (a cstruct extension of `c.bitfield`).
+ * Flags as an object of booleans (a cstruct extension; in C, flags are a
+ * plain integer, which is `c.u32()` here).
  * Writes also accept the raw integer; `toRaw` / `fromRaw` convert.
  */
 export function Bitfield<

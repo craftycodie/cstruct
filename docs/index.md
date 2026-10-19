@@ -65,7 +65,7 @@ console.log(c.sizeof(Dog)); // 19
 
 **Unions** — Tagged unions with `c.match`, predicate unions with `c.discriminatedUnion`, and overlapping `c.union`.
 
-**Field types** — `c.string`, `c.wstring`, `c.bytes`, `c.Time64`, `c.enum`, `c.bitfield`, `c.bits`, `c.MagicNumber`, `c.MagicString`, and fixed arrays.
+**Field types** — `c.string`, `c.wstring`, `c.bytes`, `c.Time64`, `c.enum`, `c.Bitfield`, `c.bits`, `c.MagicNumber`, `c.MagicString`, and fixed arrays.
 
 **C layout** — Packed by default, or natural alignment with `{ align: true }` / `{ pack: n }`; byte order per call, struct or field; `c.offsetof`.
 

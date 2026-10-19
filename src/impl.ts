@@ -43,7 +43,6 @@ export namespace cImpl {
   export import bytes = fieldFactories.bytes;
   export import MagicNumber = fieldFactories.MagicNumber;
   export import MagicString = fieldFactories.MagicString;
-  export import bitfield = fieldFactories.bitfield;
   export import union = fieldFactories.union;
   export import Bitfield = fieldFactories.Bitfield;
   export import Enum = fieldFactories.Enum;

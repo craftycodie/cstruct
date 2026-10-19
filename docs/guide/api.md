@@ -78,7 +78,6 @@ Lowercase factories are C-native types; capitalized ones are cstruct extensions 
 | `c.pad(n)` | Reserved zero bytes |
 | `c.array(element, count)` | Fixed-length array |
 | `c.enum(map \| keys, storage)` | Enum decoded to key names |
-| `c.bitfield(flags, storage)` | Flags as the storage integer, with `.mask` |
 | `c.Bitfield(flags, storage)` | Flags as `{ flag: boolean }`, with `toRaw` / `fromRaw` |
 | `c.bits(spec, storage)` | Multi-bit C bit-fields |
 | `c.union({ ... })` | Overlapping C union |

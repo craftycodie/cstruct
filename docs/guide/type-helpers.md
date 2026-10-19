@@ -80,6 +80,6 @@ function describe(schema: c.Struct) {
 
 ## Exported classes
 
-For `instanceof` checks and extensions, the package root exports the field type classes (`CFieldType`, `CNumber`, `CBigint`, `CBool`, `CString`, `CWString`, `CBytes`, `CEnum`, `CBitmask`, `CBitfield`, `CBits`, `CMagicNumber`, `CMagicString`, `CPadding`, `CMatch`, `time64_t`), `CStructField` / `CClassField`, the guards `isCFieldType`, `isCStructField`, `isCClassField` and `isClassCtor`, and `CStructError`.
+For `instanceof` checks and extensions, the package root exports the field type classes (`CFieldType`, `CNumber`, `CBigint`, `CBool`, `CString`, `CWString`, `CBytes`, `CEnum`, `CBitfield`, `CBits`, `CMagicNumber`, `CMagicString`, `CPadding`, `CMatch`, `time64_t`), `CStructField` / `CClassField`, the guards `isCFieldType`, `isCStructField`, `isCClassField` and `isClassCtor`, and `CStructError`.
 
 See [Custom types](./field-types/custom-types.md).

@@ -85,7 +85,7 @@ describe("bitfield with explicit bits", () => {
     expect(() => c.Bitfield({ a: 8 }, c.u8())).toThrow(
       "Bitfield flag 'a' uses bit 8 but u8 storage holds 8 bits"
     );
-    expect(() => c.bitfield({ a: 1, b: 1 }, c.u8())).toThrow(
+    expect(() => c.Bitfield({ a: 1, b: 1 }, c.u8())).toThrow(
       "Bitfield flags 'a' and 'b' share bit 1"
     );
     expect(() => c.Bitfield({ a: -1 }, c.u8())).toThrow(
@@ -96,51 +96,6 @@ describe("bitfield with explicit bits", () => {
   it("infers boolean flags", () => {
     const value: c.infer<typeof Sparse> = { iron: true, mythic: false };
     expect(value.iron).toBe(true);
-  });
-});
-
-describe("c.bitfield (integer flags)", () => {
-  const Skulls = c.bitfield(["iron", "black_eye", "tough_luck"], c.u32());
-  const Wide = c.bitfield({ low: 0, high: 40 }, c.u64());
-  const Challenge = c.struct({ skulls: Skulls, wide: Wide });
-
-  it("reads and writes the storage integer", () => {
-    const bytes = c.write(Challenge, { skulls: 0b101, wide: 1n << 40n });
-    expect(bytes.readUInt32LE(0)).toBe(5);
-    expect(c.read(Challenge, bytes)).toEqual({ skulls: 5, wide: 1n << 40n });
-    expectTypeOf<c.infer<typeof Challenge>>().toEqualTypeOf<{
-      skulls: number;
-      wide: bigint;
-    }>();
-  });
-
-  it("exposes masks like C #defines", () => {
-    expect(Skulls.mask).toEqual({ iron: 1, black_eye: 2, tough_luck: 4 });
-    expect(Wide.mask.high).toBe(1n << 40n);
-    const { skulls } = c.read(
-      Challenge,
-      c.write(Challenge, { skulls: 4, wide: 0n })
-    );
-    expect((skulls & Skulls.mask.tough_luck) !== 0).toBe(true);
-    expect((skulls & Skulls.mask.iron) !== 0).toBe(false);
-  });
-
-  it("converts to and from flag objects", () => {
-    expect(Skulls.toFlags(5)).toEqual({
-      iron: true,
-      black_eye: false,
-      tough_luck: true,
-    });
-    expect(
-      Skulls.fromFlags({ iron: false, black_eye: true, tough_luck: true })
-    ).toBe(6);
-    expect(Wide.fromFlags({ low: true, high: true })).toBe((1n << 40n) | 1n);
-  });
-
-  it("range-checks writes like its storage type", () => {
-    expect(() => c.write(Challenge, { skulls: 2 ** 32, wide: 0n })).toThrow(
-      "write failed at skulls: 4294967296 is out of range for u32"
-    );
   });
 });
 

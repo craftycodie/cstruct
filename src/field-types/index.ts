@@ -5,7 +5,6 @@ export {
   type BitfieldFlags,
   type BitfieldValue,
   CBitfield,
-  CBitmask,
   type RawOf,
 } from "./bitfield";
 export { type BitsSpec, type BitsValue, bits, CBits } from "./bits";
