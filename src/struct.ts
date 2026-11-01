@@ -37,6 +37,7 @@ import {
 } from "./options";
 import type { CDiscriminatedUnion, UnionOfArms } from "./unions";
 import type { FlattenIntersection, Tuple, UnionToIntersection } from "./utils";
+import { zeroFields } from "./zero";
 
 export type StructFields = Record<string, StructFieldValue>;
 
@@ -326,23 +327,23 @@ export class Struct<F extends StructFields = StructFields> {
   }
 
   /**
-   * Serialize `data`. Returns a new `Buffer` (a `Uint8Array` without Buffer),
+   * Serialize `data`. Returns a new `Uint8Array`,
    * or the `into` target when one is given.
    */
   write<S extends StructFields>(
     this: Struct<S>,
     data: StructInput<S>,
     endian?: EndianType
-  ): Buffer;
+  ): Uint8Array;
   write<S extends StructFields>(
     this: Struct<S>,
     data: StructInput<S>,
     options: WriteOptions
-  ): Buffer;
+  ): Uint8Array;
   write(
     data: Record<string, any>,
     endianOrOptions?: EndianType | WriteOptions
-  ): Buffer {
+  ): Uint8Array {
     const resolved = resolveWrite(endianOrOptions);
     try {
       checkAsserts(this.options, data);
@@ -421,6 +422,19 @@ export class Struct<F extends StructFields = StructFields> {
 
   getSize(): number {
     return this.byteSize;
+  }
+
+  /**
+   * A new value of this struct: each field's `.default()` or magic constant,
+   * `null` for tagged unions, else what zero bytes decode to. Class layouts
+   * start from `new Ctor()` and keep the fields its initializers set.
+   */
+  zero(): StructSchemaToTS<F> {
+    const ctor = this.instanceCtor;
+    return zeroFields(
+      this.layout,
+      (ctor ? new ctor() : {}) as Record<string, unknown>
+    ) as StructSchemaToTS<F>;
   }
 
   /** 1 for packed structs (the default), else the largest field alignment. */

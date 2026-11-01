@@ -44,6 +44,6 @@ describe("chdr.bin fixture", () => {
     const chunk = c.read(BlfChunkContentHeader, bytes, "big");
     const written = c.write(BlfChunkContentHeader, chunk, "big");
     // The fixture carries 16 bytes past the end of the struct.
-    expect(written.equals(bytes.subarray(0, written.length))).toBe(true);
+    expect(written).toEqual(new Uint8Array(bytes.subarray(0, written.length)));
   });
 });

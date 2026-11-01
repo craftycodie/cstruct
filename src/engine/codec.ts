@@ -1,17 +1,6 @@
 import { type CFieldType, type Endian, isCFieldType } from "../field-type";
 import { applyModifiers } from "../modifiers";
-import {
-  type BytesLike,
-  type Ctx,
-  checkRange,
-  createCtx,
-  ctxBuffer,
-} from "./ctx";
-
-/** The bytes handed to custom types: a Buffer when the runtime has one. */
-function legacyBytes(ctx: Ctx): Buffer {
-  return (ctxBuffer(ctx) ?? ctx.u8) as Buffer;
-}
+import { type BytesLike, type Ctx, checkRange, createCtx } from "./ctx";
 
 /** The record being read or written around a field (used by discriminated unions). */
 export type Parent = Record<string, any>;
@@ -113,7 +102,7 @@ function hasTrustedHook(type: unknown): type is Compilable {
 
 interface StructLikeType {
   getSize(): number;
-  read(buffer: Buffer, offset: number, endian: Endian): unknown;
+  read(buffer: Uint8Array, offset: number, endian: Endian): unknown;
   write(data: unknown, endian: Endian): Uint8Array;
 }
 
@@ -146,15 +135,14 @@ function baseCodec(type: unknown, env: CompileEnv): Codec {
   if (isCFieldType(type)) {
     const custom: CFieldType<unknown> = type;
     return {
-      read: (ctx, at) => custom.read(legacyBytes(ctx), at, endian),
-      write: (ctx, at, value) =>
-        custom.write(legacyBytes(ctx), at, value, endian),
+      read: (ctx, at) => custom.read(ctx.u8, at, endian),
+      write: (ctx, at, value) => custom.write(ctx.u8, at, value, endian),
     };
   }
   if (isStructLike(type)) {
     const nested = type;
     return {
-      read: (ctx, at) => nested.read(legacyBytes(ctx), at, endian),
+      read: (ctx, at) => nested.read(ctx.u8, at, endian),
       write: (ctx, at, value) => {
         ctx.u8.set(nested.write(value, endian), at);
       },

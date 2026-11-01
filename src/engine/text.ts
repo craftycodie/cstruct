@@ -63,10 +63,6 @@ function normalizeEncoding(encoding: string): string {
       return "utf8";
     case "binary":
       return "latin1";
-    case "ucs2":
-    case "ucs-2":
-    case "utf-16le":
-      return "utf16le";
     default:
       return lower;
   }
@@ -100,8 +96,6 @@ export function decodeBytes(
       }
       return fromCharCodes(units);
     }
-    case "utf16le":
-      return decodeUtf16(bytes, start, (end - start) >> 1, true);
     default:
       return needsBuffer(encoding);
   }
@@ -129,15 +123,6 @@ export function encodeBytes(
         bytes[at + i] = value.charCodeAt(i) & 0xff;
       }
       return count;
-    }
-    case "utf16le": {
-      const units = Math.min(value.length, length >> 1);
-      for (let i = 0; i < units; i++) {
-        const unit = value.charCodeAt(i);
-        bytes[at + i * 2] = unit & 0xff;
-        bytes[at + i * 2 + 1] = unit >>> 8;
-      }
-      return units * 2;
     }
     default:
       return needsBuffer(encoding);

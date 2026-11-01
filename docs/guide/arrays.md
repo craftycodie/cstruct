@@ -42,7 +42,7 @@ typedef struct {
 
 ## Raw bytes
 
-For opaque data (hashes, GUIDs, blobs) use [`c.bytes(n)`](./field-types/bytes.md) instead of `c.u8().array(n)`. It reads as a `Buffer`, not a number array.
+For opaque data (hashes, GUIDs, blobs) use [`c.bytes(n)`](./field-types/bytes.md) instead of `c.u8().array(n)`. It reads as a `Uint8Array`, not a number array.
 
 ## Elements
 

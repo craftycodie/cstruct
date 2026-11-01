@@ -31,7 +31,9 @@ describe("bitfield", () => {
     };
 
     const written = c.write(ChallengeFlags, value, "big");
-    expect(written).toEqual(Buffer.from([0b0000_0110, 0x00, 0x00, 0x00, 0x05]));
+    expect(written).toEqual(
+      new Uint8Array([0b0000_0110, 0x00, 0x00, 0x00, 0x05])
+    );
 
     const read = c.read(ChallengeFlags, written, "big");
     expect(read).toEqual(value);
@@ -123,7 +125,7 @@ describe("c.Bitfield raw conversions", () => {
     const Schema = c.struct({ flags: Flags, wide: Wide });
     const bytes = c.write(Schema, { flags: 0xf5, wide: 1n });
     expect(bytes[0]).toBe(0xf5);
-    expect(bytes.readBigUInt64LE(1)).toBe(1n);
+    expect(Buffer.from(bytes).readBigUInt64LE(1)).toBe(1n);
     expect(c.read(Schema, bytes).flags).toEqual({ a: true, b: false, c: true });
     expect(() => c.write(Schema, { flags: 0x100, wide: 0n })).toThrow(
       "256 is out of range for u8"

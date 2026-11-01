@@ -7,7 +7,7 @@ Declarative binary readers and writers for TypeScript, inspired by [binrw](https
 ## Features
 
 - Schema-first layouts with `c.struct({ field: c.u32() })`, or `@c.class()` / `@c.field()` decorators (standard or `experimentalDecorators`)
-- `c.read`, `c.write`, `c.sizeof` and `c.offsetof` over `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`
+- `c.read`, `c.write`, `c.sizeof` and `c.offsetof` over `Uint8Array` (including Node `Buffer`), `ArrayBuffer` or `DataView`
 - Packed by default, or C alignment with `{ align: true }` / `{ pack: n }`
 - Byte order per call, per struct or per field
 - Padding, nested structs, arrays, unions, `c.match` tagged unions, enums, bitfields and multi-bit `c.bits`

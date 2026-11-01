@@ -34,8 +34,18 @@ describe("byte sources", () => {
 
   it("rejects values that are not bytes", () => {
     expect(() => c.read(Record, "nope" as never)).toThrow(
-      "expected a Buffer, Uint8Array, ArrayBuffer or DataView"
+      "expected a Uint8Array, ArrayBuffer or DataView"
     );
+  });
+});
+
+describe("output type", () => {
+  it("writes and reads plain Uint8Arrays even where Buffer exists", () => {
+    const bytes = c.write(Record, sample);
+    expect(bytes.constructor).toBe(Uint8Array);
+    const Blob = c.struct({ hash: c.bytes(4) });
+    const read = c.read(Blob, Buffer.from([1, 2, 3, 4]));
+    expect(read.hash.constructor).toBe(Uint8Array);
   });
 });
 

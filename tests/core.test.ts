@@ -94,17 +94,21 @@ describe("checked integer writes", () => {
   });
 
   it("accepts values that fit the bit width as signed or unsigned", () => {
-    const bytes = c.write(Ints, { byte: -1, word: -1, small: 0xffff });
+    const bytes = Buffer.from(
+      c.write(Ints, { byte: -1, word: -1, small: 0xffff })
+    );
     expect(bytes.readUInt8(0)).toBe(0xff);
     expect(bytes.readUInt32LE(1)).toBe(0xffffffff);
     expect(bytes.readInt16LE(5)).toBe(-1);
   });
 
   it("wraps instead with checked: false", () => {
-    const bytes = c.write(
-      Ints,
-      { byte: 300, word: 2 ** 32 + 5, small: 0 },
-      { checked: false }
+    const bytes = Buffer.from(
+      c.write(
+        Ints,
+        { byte: 300, word: 2 ** 32 + 5, small: 0 },
+        { checked: false }
+      )
     );
     expect(bytes.readUInt8(0)).toBe(44);
     expect(bytes.readUInt32LE(1)).toBe(5);
@@ -115,14 +119,14 @@ describe("checked integer writes", () => {
     expect(() => c.write(Wide, { value: 2n ** 64n })).toThrow(
       "18446744073709551616 is out of range for u64"
     );
-    expect(c.write(Wide, { value: -1n }).readBigUInt64LE(0)).toBe(
+    expect(Buffer.from(c.write(Wide, { value: -1n })).readBigUInt64LE(0)).toBe(
       2n ** 64n - 1n
     );
   });
 
   it("rejects enum values that do not fit their storage", () => {
     const Kind = c.struct({ kind: c.Enum({ Big: 300 }, c.u8()) });
-    expect(() => c.write(Kind, { kind: "Big" })).toThrow(
+    expect(() => c.write(Kind, { kind: 300 })).toThrow(
       "300 is out of range for u8"
     );
   });
@@ -235,5 +239,21 @@ describe("c.bytes", () => {
     expect(() => c.write(Blob, { hash: [1, 2] as never, tail: 0 })).toThrow(
       "expected bytes (Uint8Array, ArrayBuffer or DataView), got array of 2"
     );
+  });
+});
+
+describe("c.string encodings", () => {
+  it("rejects UTF-16 and points to c.wstring", () => {
+    for (const encoding of [
+      "utf16le",
+      "utf-16le",
+      "ucs2",
+      "ucs-2",
+      "UTF16LE",
+    ]) {
+      expect(() => c.string(8, encoding as never)).toThrow(
+        /cannot hold .*; use c\.wstring\(chars\) for UTF-16 text/
+      );
+    }
   });
 });

@@ -16,6 +16,7 @@ import {
   CPadding,
   CString,
   CWString,
+  type EnumLike,
   f32 as numberF32,
   f64 as numberF64,
   i8 as numberI8,
@@ -25,6 +26,7 @@ import {
   u16 as numberU16,
   u32 as numberU32,
   pad as padField,
+  type StringEncoding,
   Time64 as time64Field,
 } from "./field-types";
 import type { Struct } from "./struct";
@@ -57,7 +59,7 @@ export function array<
 /** Fixed-length character array, `char name[N]`, decoded up to the first NUL. */
 export function string<L extends number, const O extends IFieldOptions = {}>(
   length: L,
-  encoding: BufferEncoding = "utf8",
+  encoding: StringEncoding = "utf8",
   options?: O
 ) {
   return new CString(length, encoding, options);
@@ -115,11 +117,11 @@ export function Bitfield<
 
 /** C enum stored as `type`; decodes to the key names. Unknown values throw. */
 export function enumField<
-  const T extends readonly string[] | Record<string, number>,
+  const T extends readonly string[] | EnumLike,
   PT extends CNumeric,
   const O extends IFieldOptions = {},
->(keysOrMap: T, type: PT, options?: O) {
-  return new CEnum(keysOrMap, type, options);
+>(namesOrEnum: T, type: PT, options?: O) {
+  return new CEnum(namesOrEnum, type, options);
 }
 
 /** C union: every member decodes from the same bytes. */

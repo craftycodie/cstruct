@@ -24,9 +24,9 @@ export abstract class CFieldType<T, const O extends FieldOptions = {}> {
     return 1;
   }
 
-  abstract read(buffer: Buffer, offset: number, endian: Endian): T;
+  abstract read(buffer: Uint8Array, offset: number, endian: Endian): T;
   abstract write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: T,
     endian: Endian

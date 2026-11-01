@@ -29,8 +29,8 @@ esbuild rejects `@c.class()` in standard-decorator mode because `class` is a res
 
 ## Runtimes
 
-Node.js 18+, Bun, Deno and browsers. Reads accept `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`. `c.write` returns a `Buffer` when the runtime has one, and a `Uint8Array` otherwise.
+Node.js 18+, Bun, Deno and browsers. Reads accept a `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`. `c.write` returns a `Uint8Array` on every runtime, and the types need no `@types/node`.
 
-Without `Buffer`, `c.string` supports the `utf8`, `latin1`, `ascii` and `utf16le` encodings; `hex` and `base64` need `Buffer`.
+Without `Buffer`, `c.string` supports the `utf8`, `latin1` and `ascii` encodings; `hex` and `base64` need `Buffer`.
 
 Code generation uses `new Function`. Where that is blocked (a Content Security Policy, Cloudflare Workers) cstruct falls back to an interpreter automatically. See [Performance](./performance.md).

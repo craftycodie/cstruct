@@ -31,7 +31,7 @@ The accepted write type, which can be looser than the decoded type:
 | `c.MagicNumber` / `c.MagicString` | optional (the constant is written) |
 | `.default(value)` | optional |
 | `c.match` / `c.discriminatedUnion` | optional; `null` or missing zero-fills |
-| `c.bytes(n)` | any `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView` |
+| `c.bytes(n)` | any `Uint8Array`, `ArrayBuffer` or `DataView` |
 | `c.class(Ctor)` | the class's data properties (methods dropped) |
 | arrays | readonly tuples or arrays |
 
@@ -44,7 +44,7 @@ const Header = c.struct({
 });
 
 type HeaderIn = c.input<typeof Header>;
-// { hash: Buffer | Uint8Array | ArrayBuffer | DataView; magic?: "HDR1"; version?: number }
+// { hash: Uint8Array | ArrayBuffer | DataView; magic?: "HDR1"; version?: number }
 
 c.write(Header, { hash: new Uint8Array(4) });
 ```

@@ -9,7 +9,7 @@ Subclass `CFieldType` when you need a format that is not a primitive, nested str
 
 `c.sizeof` includes `getSize()` in the struct total.
 
-`buffer` is the whole input or output (a `Buffer`, or a `Uint8Array` where `Buffer` does not exist), and `offset` is the field's absolute position in it. The struct checks bounds before calling you, so `offset + getSize()` always fits. Modifiers (`.array()`, `.transform()`, `.default()`, …) work on custom types too.
+`buffer` is the whole input or output as a `Uint8Array`, and `offset` is the field's absolute position in it. The struct checks bounds before calling you, so `offset + getSize()` always fits. Modifiers (`.array()`, `.transform()`, `.default()`, …) work on custom types too.
 
 ```ts
 import { CFieldType, c } from "@craftycodie/cstruct";
@@ -20,12 +20,12 @@ class Rgb24 extends CFieldType<[number, number, number]> {
     return 3;
   }
 
-  read(buffer: Buffer, offset: number): [number, number, number] {
+  read(buffer: Uint8Array, offset: number): [number, number, number] {
     return [buffer[offset]!, buffer[offset + 1]!, buffer[offset + 2]!];
   }
 
   write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: [number, number, number]
   ): void {

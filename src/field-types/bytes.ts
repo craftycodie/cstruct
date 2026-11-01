@@ -6,7 +6,7 @@ import {
   readWith,
   writeWith,
 } from "../engine/codec";
-import { allocBytes, type BytesLike, toBytes } from "../engine/ctx";
+import { type BytesLike, toBytes } from "../engine/ctx";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -16,13 +16,13 @@ function isBytesLike(value: unknown): value is BytesLike {
 
 /**
  * Raw fixed-length bytes (`uint8_t data[N]`): hashes, GUIDs, opaque blobs.
- * Reads copy into a new `Buffer` (a `Uint8Array` without Buffer). Writes
+ * Reads copy into a new `Uint8Array`. Writes
  * accept any byte source; shorter input is zero-padded.
  */
 export class CBytes<
   L extends number,
   const O extends FieldOptions = {},
-> extends CFieldType<Buffer, O> {
+> extends CFieldType<Uint8Array, O> {
   readonly length: L;
 
   constructor(length: L, options?: O) {
@@ -39,7 +39,7 @@ export class CBytes<
     return this.length;
   }
 
-  read(buffer: Uint8Array, offset: number, endian: Endian): Buffer {
+  read(buffer: Uint8Array, offset: number, endian: Endian): Uint8Array {
     return readWith(this, buffer, offset, endian);
   }
 
@@ -47,15 +47,12 @@ export class CBytes<
     writeWith(this, buffer, offset, value, endian);
   }
 
-  [COMPILE](env: CompileEnv): Codec<Buffer> {
+  [COMPILE](env: CompileEnv): Codec<Uint8Array> {
     const length = this.length;
     const { checked } = env;
     return {
-      read: (ctx, at) => {
-        const out = allocBytes(length);
-        out.set(ctx.u8.subarray(at, at + length));
-        return out;
-      },
+      // Copy into a plain Uint8Array: Buffer#slice would return a view.
+      read: (ctx, at) => new Uint8Array(ctx.u8.subarray(at, at + length)),
       write: (ctx, at, value) => {
         if (!isBytesLike(value)) {
           expected("bytes (Uint8Array, ArrayBuffer or DataView)", value);

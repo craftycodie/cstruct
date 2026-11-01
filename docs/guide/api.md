@@ -13,7 +13,7 @@ c.read(Class, bytes, …)       // returns a new instance
 c.read(instance, bytes, …)    // fills and returns the instance
 ```
 
-`bytes` is a `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`. The whole layout must fit at `offset`, or the read throws before decoding anything.
+`bytes` is a `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`. The whole layout must fit at `offset`, or the read throws before decoding anything.
 
 ### `c.write`
 
@@ -24,7 +24,7 @@ c.write(array, data, …)
 c.write(instance, endianOrOptions?)
 ```
 
-Returns a new `Buffer` (a `Uint8Array` where `Buffer` does not exist), or `into` when given. `data` is typed as [`c.input`](./type-helpers.md#c-input-t).
+Returns a new `Uint8Array`, or `into` when given. `data` is typed as [`c.input`](./type-helpers.md#c-input-t).
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -47,6 +47,7 @@ c.offsetof(schema | Class | instance, "header.points[2].x")
 | `schema.read(bytes, …)` | `c.read(schema, bytes, …)` |
 | `schema.write(data, …)` | `c.write(schema, data, …)` |
 | `schema.writeInto(target, data, offset?, endian?)` | `c.write(schema, data, { into: target, offset, endian })` |
+| `schema.zero()` | A new value: each field's `.default()` or magic constant, `null` for tagged unions, else what zero bytes decode to |
 | `schema.size` / `schema.getSize()` | `c.sizeof(schema)` |
 | `schema.getAlign()` | Struct alignment (1 when packed) |
 | `schema.offsetOf(path)` | `c.offsetof(schema, path)` |
@@ -74,10 +75,10 @@ Lowercase factories are C-native types; capitalized ones are cstruct extensions 
 | `c.bool()` | 1-byte boolean |
 | `c.string(n, encoding?)` | `char[n]`, NUL-terminated; utf8 by default |
 | `c.wstring(n)` | `wchar_t[n]` (UTF-16, `2n` bytes) |
-| `c.bytes(n)` | Raw bytes as a `Buffer` |
+| `c.bytes(n)` | Raw bytes as a `Uint8Array` |
 | `c.pad(n)` | Reserved zero bytes |
 | `c.array(element, count)` | Fixed-length array |
-| `c.enum(map \| keys, storage)` | Enum decoded to key names |
+| `c.enum(enum \| object \| names, storage)` | Enum: member values for a TypeScript enum or object, names for a list |
 | `c.Bitfield(flags, storage)` | Flags as `{ flag: boolean }`, with `toRaw` / `fromRaw` |
 | `c.bits(spec, storage)` | Multi-bit C bit-fields |
 | `c.union({ ... })` | Overlapping C union |
@@ -95,7 +96,7 @@ Deprecated aliases: `c.String`, `c.WString`, `c.Enum`, `c.Union`, `c.Pad`.
 
 Available on every field type, struct and array. See [Modifiers](./modifiers.md).
 
-`.array(n)`, `.padBefore(n)`, `.padAfter(n)`, `.be()`, `.le()`, `.default(value)`, `.transform(decode, encode)`, `.assert(check, message?)`
+`.array(n)`, `.padBefore(n)`, `.padAfter(n)`, `.be()`, `.le()`, `.default(value)`, `.nullable(sentinel)`, `.transform(decode, encode)`, `.assert(check, message?)`
 
 ## Decorators
 

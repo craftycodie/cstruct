@@ -6,6 +6,7 @@ import {
   type OptionalInput,
   withOptions,
 } from "./modifiers";
+import { CNullable } from "./nullable";
 import type { input, output } from "./struct";
 import { CTransform } from "./transform";
 
@@ -41,6 +42,15 @@ export interface Chainable {
   ): Self & OptionalInput;
   /** Little-endian, regardless of the struct or call site. */
   le<Self>(this: Self): Self;
+  /**
+   * Store `null` as `sentinel` (like Blam's `NONE`, -1): reading the
+   * sentinel gives `null`. For an enum or bitfield, `sentinel` is the raw
+   * storage integer.
+   */
+  nullable<Self>(
+    this: Self,
+    sentinel: input<Self> | number | bigint
+  ): CNullable<Self>;
   /** Reserved zero bytes after this field. */
   padAfter<Self>(this: Self, bytes: number): Self;
   /** Reserved zero bytes before this field. */
@@ -77,6 +87,9 @@ const CHAIN_METHODS: Record<keyof Chainable, (...args: any[]) => unknown> = {
     return withOptions(this, { default: value, hasDefault: true });
   },
   le: endianModifier("little"),
+  nullable(this: object, sentinel: unknown) {
+    return new CNullable(this, sentinel);
+  },
   padAfter(this: object, bytes: number) {
     return withOptions(this, { padAfter: bytes });
   },

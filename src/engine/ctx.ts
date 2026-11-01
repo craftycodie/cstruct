@@ -1,14 +1,29 @@
 /** Byte sources accepted by reads. */
 export type BytesLike = Uint8Array | ArrayBuffer | DataView;
 
-type BufferCtor = typeof Buffer;
+/** The parts of Node's `Buffer` that string fields use for text encodings. */
+export interface NodeBuffer {
+  toString(encoding: string, start: number, end: number): string;
+  write(
+    value: string,
+    offset: number,
+    length: number,
+    encoding: string
+  ): number;
+}
 
-let bufferImpl: BufferCtor | undefined = (globalThis as { Buffer?: BufferCtor })
-  .Buffer;
+interface NodeBufferCtor {
+  from(buffer: ArrayBufferLike, byteOffset: number, length: number): NodeBuffer;
+  isBuffer(value: unknown): boolean;
+}
+
+let bufferImpl: NodeBufferCtor | undefined = (
+  globalThis as { Buffer?: NodeBufferCtor }
+).Buffer;
 
 /** @internal Test hook: simulate a runtime without `Buffer`. */
-export function setBufferImplForTesting(impl: BufferCtor | undefined): void {
-  bufferImpl = impl;
+export function setBufferImplForTesting(impl: unknown): void {
+  bufferImpl = impl as NodeBufferCtor | undefined;
 }
 
 /**
@@ -18,7 +33,7 @@ export function setBufferImplForTesting(impl: BufferCtor | undefined): void {
  */
 export interface Ctx {
   /** Lazily created `Buffer` over the same memory, when `Buffer` exists. */
-  buf: Buffer | undefined;
+  buf: NodeBuffer | undefined;
   readonly dv: DataView;
   readonly u8: Uint8Array;
 }
@@ -34,7 +49,7 @@ export function toBytes(input: BytesLike): Uint8Array {
     return new Uint8Array(input);
   }
   throw new TypeError(
-    "expected a Buffer, Uint8Array, ArrayBuffer or DataView to read from"
+    "expected a Uint8Array, ArrayBuffer or DataView to read from"
   );
 }
 
@@ -43,12 +58,12 @@ export function createCtx(input: BytesLike): Ctx {
   return {
     u8,
     dv: new DataView(u8.buffer, u8.byteOffset, u8.byteLength),
-    buf: bufferImpl?.isBuffer(u8) ? u8 : undefined,
+    buf: bufferImpl?.isBuffer(u8) ? (u8 as unknown as NodeBuffer) : undefined,
   };
 }
 
 /** A `Buffer` over the context's bytes, or undefined without `Buffer`. */
-export function ctxBuffer(ctx: Ctx): Buffer | undefined {
+export function ctxBuffer(ctx: Ctx): NodeBuffer | undefined {
   if (ctx.buf === undefined && bufferImpl !== undefined) {
     ctx.buf = bufferImpl.from(
       ctx.u8.buffer,
@@ -57,11 +72,6 @@ export function ctxBuffer(ctx: Ctx): Buffer | undefined {
     );
   }
   return ctx.buf;
-}
-
-/** Zeroed output bytes: a `Buffer` when available, else a `Uint8Array`. */
-export function allocBytes(size: number): Buffer {
-  return (bufferImpl ? bufferImpl.alloc(size) : new Uint8Array(size)) as Buffer;
 }
 
 /** Throws unless `size` bytes starting at `offset` lie inside `bytes`. */

@@ -23,7 +23,10 @@ function configure(options: ConfigureOptions): void {
 
 export const c = Object.assign(cImpl, {
   configure,
-  /** C enum stored as a numeric type; decodes to the key names. */
+  /**
+   * C enum stored as a numeric type. A list of names decodes to the names;
+   * an object or TypeScript enum decodes to its member values (zod 4 style).
+   */
   enum: enumField,
   field: fieldImpl,
   class: classImpl,

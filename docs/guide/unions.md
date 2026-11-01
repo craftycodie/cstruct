@@ -18,9 +18,10 @@ type Data = c.infer<typeof Metadata>["file_type_data"];
 ```
 
 - The first argument is a dot path into the record being read or written. Only fields **before** the union are available on read.
-- Keys are compared as strings, so numeric codes, enum keys (`{ Film: ..., Variant: ... }` with a `c.enum` discriminant) and bigints all work.
+- Keys are compared as strings, so numeric codes (including enum members: `{ [FileType.Film]: Film }`), list-enum names and bigints all work.
 - An unknown discriminant reads as `null`. Writing `null` (or leaving the field out) zero-fills the slot.
 - The slot is as large as the largest arm. Unused bytes are zero on write.
+- An arm can be any schema or field type, or a decorated class as `c.class(Ctor)`; class arms read as instances of the class.
 
 Options:
 
@@ -61,6 +62,7 @@ const Host = c.struct({
 
 - `c.arm(schema, when)`: predicate on the parent record
 - `c.when(value, schema, discriminant)`: shorthand for `discriminant(parent) === value`
+- Either accepts `c.class(Ctor)` in place of a schema.
 
 Prefer `c.match` where a single field decides: its discriminant needs no casts.
 

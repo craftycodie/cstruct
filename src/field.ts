@@ -14,7 +14,7 @@ export interface FieldOptions {
 export interface StructFieldType {
   getSize(): number;
   read(buffer: Uint8Array, offset?: number, endian?: Endian): unknown;
-  write(data: Record<string, unknown>, endian?: Endian): Buffer;
+  write(data: Record<string, unknown>, endian?: Endian): Uint8Array;
 }
 
 export type { UnionArmInput, UnionOfArms } from "./unions";
@@ -60,6 +60,7 @@ export class CClassField<S, const O extends FieldOptions = {}, I = unknown> {
   readonly __cclassField = true as const;
   /** Type-only: the decorated class's instance type. */
   declare readonly __instance?: I;
+  /** @internal The class's layout; embed the class with `c.class(Ctor)`. */
   readonly struct: S;
   readonly options: O;
 

@@ -1,7 +1,7 @@
 import { asCStructError } from "../errors";
 import type { ResolvedWrite } from "../options";
 import { type Codec, NO_PARENT } from "./codec";
-import { allocBytes, type BytesLike, checkRange, createCtx } from "./ctx";
+import { type BytesLike, checkRange, createCtx } from "./ctx";
 
 /** Top-level read: bounds check once, wrap errors as CStructError. */
 export function runRead<T>(
@@ -25,8 +25,8 @@ export function runWrite(
   size: number,
   data: unknown,
   { into, offset }: ResolvedWrite
-): Buffer {
-  const target = into ?? allocBytes(size);
+): Uint8Array {
+  const target = into ?? new Uint8Array(size);
   const at = into ? offset : 0;
   try {
     const ctx = createCtx(target);
@@ -38,5 +38,5 @@ export function runWrite(
   } catch (error) {
     throw asCStructError(error, "write");
   }
-  return target as Buffer;
+  return target;
 }

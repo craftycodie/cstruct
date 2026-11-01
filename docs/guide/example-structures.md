@@ -100,7 +100,7 @@ const bytes = c.write(ContentItemGeneralMetadata, general, "little");
 
 ## Reading at an offset
 
-`c.read` accepts an offset into a larger `Buffer` — useful when a struct is embedded in a file:
+`c.read` accepts an offset into a larger buffer — useful when a struct is embedded in a file:
 
 ```ts
 const inner = c.write(ContentItemGeneralMetadata, general, "little");

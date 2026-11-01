@@ -61,18 +61,18 @@ Mix schemas and decorated classes with `c.class(Ctor)`. See [Class decorators](.
 | `c.read(schema, bytes, { offset, endian })` | Same, with options |
 | `c.read(Class, bytes, …)` | New class instance |
 | `c.read(instance, bytes, …)` | Fills and returns `instance` |
-| `c.write(schema, data, endian?)` | New `Buffer` |
+| `c.write(schema, data, endian?)` | New `Uint8Array` |
 | `c.write(schema, data, { endian, into, offset, checked })` | Writes into `into` when given |
-| `c.write(instance, endianOrOptions?)` | New `Buffer` |
+| `c.write(instance, endianOrOptions?)` | New `Uint8Array` |
 | `c.sizeof(schema \| class \| instance \| field)` | Size in bytes |
 | `c.offsetof(schema \| class, "a.b[2].c")` | Byte offset of a field |
 
-`bytes` can be a `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`.
+`bytes` can be a `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`.
 
 Read from an offset inside a larger buffer:
 
 ```ts
-const file = Buffer.alloc(16);
+const file = new Uint8Array(16);
 const header = c.read(Header, file, { offset: 4, endian: "big" });
 ```
 

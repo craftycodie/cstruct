@@ -2,7 +2,6 @@ import { CArray, isCArray } from "./array";
 import {
   CAnnotatedField,
   CClassField,
-  type CStructField,
   type FieldOptions,
   isCAnnotatedField,
   isCClassField,
@@ -11,7 +10,7 @@ import {
 } from "./field";
 import { isCPadding } from "./field-types";
 import type { StructOptions } from "./options";
-import type { output } from "./struct";
+import type { output, Struct } from "./struct";
 import type { Tuple } from "./utils";
 
 const CCLASS_LAYOUT = Symbol.for("cstruct.class.layout");
@@ -39,26 +38,15 @@ export interface ClassFieldMeta {
 const PENDING_FIELDS = new WeakMap<Function, ClassFieldMeta[]>();
 /** Stage 3 decorators without Symbol.metadata: fields of the class being defined. */
 const PENDING_STAGE3_FIELDS: ClassFieldMeta[] = [];
-const CLASS_STRUCTS = new WeakMap<Function, StructLike>();
+const CLASS_STRUCTS = new WeakMap<Function, Struct>();
 /** Every field of a decorated class, inherited ones first. */
 const CLASS_FIELDS = new WeakMap<Function, readonly ClassFieldMeta[]>();
-
-interface StructLike {
-  field(options?: FieldOptions): CStructField<StructLike, FieldOptions>;
-  getSize(): number;
-  read(
-    buffer: Uint8Array,
-    offset?: number,
-    endian?: "little" | "big"
-  ): Record<string, unknown>;
-  write(data: Record<string, unknown>, endian?: "little" | "big"): Buffer;
-}
 
 type StructFactory = (
   fields: Record<string, StructFieldValue>,
   options: StructOptions | undefined,
   ctor: ClassCtor
-) => StructLike;
+) => Struct;
 
 let createStruct: StructFactory | undefined;
 
@@ -101,7 +89,7 @@ function decoratedAncestor<T>(
  * The struct of a decorated class. An undecorated subclass of a decorated
  * class uses its ancestor's layout.
  */
-export function getClassStruct(ctor: ClassCtor): StructLike {
+export function getClassStruct(ctor: ClassCtor): Struct {
   const struct = decoratedAncestor(ctor, CLASS_STRUCTS);
   if (!struct) {
     throw new Error(`${ctor.name}: not decorated with @c.class()`);
@@ -109,7 +97,7 @@ export function getClassStruct(ctor: ClassCtor): StructLike {
   return struct;
 }
 
-function isStructFieldType(value: unknown): value is StructLike {
+function isStructFieldType(value: unknown): value is Struct {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -228,7 +216,7 @@ export function classImpl(options?: StructOptions): ClassDecorator;
 export function classImpl<C extends ClassCtor>(
   ctor: C,
   options?: FieldOptions
-): CClassField<StructLike, FieldOptions, InstanceType<C>>;
+): CClassField<Struct, FieldOptions, InstanceType<C>>;
 export function classImpl(
   ctorOrOptions?: ClassCtor | StructOptions,
   fieldOptions?: FieldOptions

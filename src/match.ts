@@ -7,16 +7,23 @@ import {
   readWith,
   writeWith,
 } from "./engine/codec";
-import type { FieldOptions, FieldType } from "./field";
+import {
+  type CClassField,
+  type FieldOptions,
+  type FieldType,
+  unwrapFieldType,
+} from "./field";
 import { alignOf, CFieldType, type Endian } from "./field-type";
 import type { infer as Infer } from "./struct";
 
-/** Arm schemas keyed by discriminant value (numbers, enum keys, strings). */
-export type MatchArms = Readonly<Record<string | number, FieldType>>;
+/** A `c.match` arm: a schema or field type, or `c.class(Ctor)`. */
+export type MatchArm = FieldType | CClassField<any, any, any>;
 
-export interface MatchOptions<
-  Fallback extends FieldType | undefined = undefined,
-> extends FieldOptions {
+/** Arm schemas keyed by discriminant value (numbers, enum keys, strings). */
+export type MatchArms = Readonly<Record<string | number, MatchArm>>;
+
+export interface MatchOptions<Fallback extends MatchArm | undefined = undefined>
+  extends FieldOptions {
   /** Arm used when the discriminant matches no key. Default: decode as null. */
   fallback?: Fallback;
   /** Slot size in bytes. Default: the largest arm (and fallback). */
@@ -25,10 +32,10 @@ export interface MatchOptions<
 
 export type MatchValue<
   Arms extends MatchArms,
-  Fallback extends FieldType | undefined,
+  Fallback extends MatchArm | undefined,
 > =
   | { [K in keyof Arms]: Infer<Arms[K]> }[keyof Arms]
-  | (Fallback extends FieldType ? Infer<Fallback> : null);
+  | (Fallback extends MatchArm ? Infer<Fallback> : null);
 
 const PATH_SEPARATOR = ".";
 
@@ -44,12 +51,15 @@ const PATH_SEPARATOR = ".";
  */
 export class CMatch<
   const Arms extends MatchArms,
-  const Fallback extends FieldType | undefined = undefined,
+  const Fallback extends MatchArm | undefined = undefined,
   const O extends MatchOptions<Fallback> = MatchOptions<Fallback>,
 > extends CFieldType<MatchValue<Arms, Fallback>, O> {
   readonly path: string;
   readonly arms: Arms;
   private readonly keys: string[];
+  /** Field type of each arm, in `keys` order (`c.class` arms unwrapped). */
+  private readonly types: FieldType[];
+  private readonly fallbackType: FieldType | undefined;
   private readonly slotSize: number;
 
   constructor(path: string, arms: Arms, options?: O) {
@@ -60,6 +70,11 @@ export class CMatch<
     if (this.keys.length === 0) {
       throw new Error("c.match needs at least one arm");
     }
+    this.types = this.keys.map((key) => unwrapFieldType(arms[key]));
+    this.fallbackType =
+      options?.fallback === undefined
+        ? undefined
+        : unwrapFieldType(options.fallback);
     const types = this.armTypes();
     const largest = Math.max(...types.map((type) => type.getSize()));
     if (options?.size !== undefined && options.size < largest) {
@@ -71,9 +86,7 @@ export class CMatch<
   }
 
   private armTypes(): FieldType[] {
-    const types = this.keys.map((key) => this.arms[key]);
-    const fallback = this.options.fallback;
-    return fallback ? [...types, fallback] : types;
+    return this.fallbackType ? [...this.types, this.fallbackType] : this.types;
   }
 
   getSize(): number {
@@ -105,6 +118,8 @@ export class CMatch<
 
   [COMPILE](env: CompileEnv): Codec<unknown> {
     const { path, keys, slotSize } = this;
+    const armTypes = this.types;
+    const fallbackType = this.fallbackType;
     const segments = path.split(PATH_SEPARATOR);
     const discriminant = (parent: Parent): unknown => {
       let value: unknown = parent;
@@ -114,10 +129,8 @@ export class CMatch<
       return value;
     };
     const indexByKey = new Map(keys.map((key, i) => [key, i]));
-    const armTypes = keys.map((key) => this.arms[key]);
     const codecs = armTypes.map((type) => compileType(type, env));
     const sizes = armTypes.map((type) => type.getSize());
-    const fallbackType = this.options.fallback;
     const fallback = fallbackType
       ? { codec: compileType(fallbackType, env), size: fallbackType.getSize() }
       : undefined;
@@ -156,7 +169,7 @@ export class CMatch<
 
 export function match<
   const Arms extends MatchArms,
-  const Fallback extends FieldType | undefined = undefined,
+  const Fallback extends MatchArm | undefined = undefined,
 >(
   path: string,
   arms: Arms,

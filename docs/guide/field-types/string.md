@@ -20,6 +20,8 @@ typedef struct {
 } Tag;
 ```
 
-The encoding can be any Node `BufferEncoding`; utf8 is the default. Use `"latin1"` for 8-bit text or data that may not be valid UTF-8: utf8 decoding replaces invalid bytes with U+FFFD, so they would not survive a round trip. Without `Buffer` (browsers, Deno), `utf8`, `latin1`, `ascii` and `utf16le` are supported.
+The encoding can be `utf8` (the default), `latin1`, `ascii`, `hex`, `base64` or `base64url`, or an alias Node accepts (`utf-8`, `binary`). Use `"latin1"` for 8-bit text or data that may not be valid UTF-8: utf8 decoding replaces invalid bytes with U+FFFD, so they would not survive a round trip. Without `Buffer` (browsers, Deno), `utf8`, `latin1` and `ascii` are supported.
+
+`c.string` is a byte array (`char[n]`), so `n` is in bytes. UTF-16 text is a `wchar_t` array: use [`c.wstring(n)`](./wstring.md), whose `n` is in characters and whose code units follow the field's byte order. `c.string(n, "utf16le")` throws.
 
 `c.String` is a deprecated alias.

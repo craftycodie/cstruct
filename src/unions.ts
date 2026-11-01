@@ -10,7 +10,12 @@ import {
   writeWith,
 } from "./engine/codec";
 import { checkRange, createCtx } from "./engine/ctx";
-import type { FieldOptions, StructFieldType } from "./field";
+import {
+  type CClassField,
+  type FieldOptions,
+  type StructFieldType,
+  unwrapFieldType,
+} from "./field";
 import { alignOf, CFieldType, type Endian } from "./field-type";
 import type { cImpl as CTypes } from "./impl";
 
@@ -130,33 +135,33 @@ export class CUnion<
 
 export type UnionWhen = (parent: Record<string, unknown>) => boolean;
 
-export type UnionArmInput<S extends StructFieldType = StructFieldType> =
-  readonly [S, UnionWhen];
+/** A `discriminatedUnion` arm's layout: a struct, or `c.class(Ctor)`. */
+export type UnionArmType = StructFieldType | CClassField<any, any, any>;
+
+export type UnionArmInput<S extends UnionArmType = UnionArmType> = readonly [
+  S,
+  UnionWhen,
+];
 
 export type UnionArmSchema<A extends UnionArmInput> = A extends readonly [
   infer S,
   UnionWhen,
 ]
-  ? S extends CTypes.Struct<infer F>
-    ? CTypes.StructSchemaToTS<F>
-    : never
+  ? CTypes.infer<S>
   : never;
 
 export type UnionOfArms<Arms extends readonly UnionArmInput[]> = UnionArmSchema<
   Arms[number]
 >;
 
-export function arm<S extends StructFieldType>(
+export function arm<S extends UnionArmType>(
   struct: S,
   when: UnionWhen
 ): UnionArmInput<S> {
   return [struct, when];
 }
 
-export function when<
-  S extends StructFieldType,
-  const V extends number | string,
->(
+export function when<S extends UnionArmType, const V extends number | string>(
   value: V,
   struct: S,
   discriminant: (parent: Record<string, unknown>) => number | string
@@ -185,7 +190,7 @@ function parseArms(arms: readonly UnionArmInput[]): {
         "Union arm requires c.arm(Struct, (parent) => ...) or c.when(value, Struct, (parent) => ...)"
       );
     }
-    structs.push(input[0]);
+    structs.push(unwrapFieldType(input[0]) as StructFieldType);
     whens.push(input[1]);
   }
 

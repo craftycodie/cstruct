@@ -13,14 +13,14 @@ describe("naming", () => {
     const bytes = c.write(Schema, {
       name: "ab",
       wide: "z",
-      kind: "B",
+      kind: 2,
       flags: { x: true, y: false },
       either: { word: { v: 7 } },
     });
     expect(c.read(Schema, bytes)).toMatchObject({
       name: "ab",
       wide: "z",
-      kind: "B",
+      kind: 2,
       flags: { x: true, y: false },
       either: { word: { v: 7 } },
     });
@@ -109,19 +109,23 @@ describe("c.match", () => {
     ).toThrow("write failed at data: c.match: no arm for header.kind = 1");
   });
 
-  it("supports a fallback arm, an explicit size and enum keys", () => {
+  it("supports a fallback arm, an explicit size and enum values", () => {
     const Kind = c.enum({ Film: 3, Variant: 6, Junk: 9 }, c.u8());
     const WithFallback = c.struct({
       kind: Kind,
-      data: c.match("kind", { Film, Variant }, { fallback: Other, size: 8 }),
+      data: c.match(
+        "kind",
+        { 3: Film, 6: Variant },
+        { fallback: Other, size: 8 }
+      ),
     });
     expect(WithFallback.size).toBe(9);
-    const bytes = c.write(WithFallback, { kind: "Junk", data: { raw: 5 } });
+    const bytes = c.write(WithFallback, { kind: 9, data: { raw: 5 } });
     expect(c.read(WithFallback, bytes).data).toEqual({ raw: 5 });
     expect(
       c.read(
         WithFallback,
-        c.write(WithFallback, { kind: "Film", data: { seconds: 1 } })
+        c.write(WithFallback, { kind: 3, data: { seconds: 1 } })
       ).data
     ).toEqual({ seconds: 1 });
     expectTypeOf<c.infer<typeof WithFallback>["data"]>().toEqualTypeOf<
@@ -203,7 +207,7 @@ describe("chain modifiers", () => {
     );
     const Schema = c.struct({ scale: Fixed16, flag: c.u8().padBefore(1) });
     const bytes = c.write(Schema, { scale: 1.5, flag: 1 });
-    expect(bytes.readInt32LE(0)).toBe(98304);
+    expect(Buffer.from(bytes).readInt32LE(0)).toBe(98304);
     expect(Schema.size).toBe(6);
     expect(c.read(Schema, bytes)).toEqual({ scale: 1.5, flag: 1 });
 
@@ -318,5 +322,120 @@ describe("input and output types", () => {
       x: number;
       y: number;
     }>();
+  });
+});
+
+describe("Struct#zero", () => {
+  const Inner = c.struct({ id: c.u16(), tag: c.u8().default(7) });
+  const Schema = c.struct({
+    count: c.u32(),
+    big: c.i64(),
+    name: c.string(8),
+    when: c.Time64(),
+    flag: c.bool().padAfter(3),
+    points: c.u8().array(3),
+    inner: Inner,
+    inners: Inner.array(2),
+    kind: c.enum({ A: 1, B: 2 }, c.u8()).default(2),
+    magic: c.MagicNumber(0xbeef, c.u16()),
+    _reserved: c.pad(2),
+    body: c.match("count", { 1: c.struct({ x: c.u8() }) }),
+  });
+
+  it("uses defaults and magic constants, else zero bytes", () => {
+    expect(Schema.zero()).toEqual({
+      count: 0,
+      big: 0n,
+      name: "",
+      when: new Date(0),
+      flag: false,
+      points: [0, 0, 0],
+      inner: { id: 0, tag: 7 },
+      inners: [
+        { id: 0, tag: 7 },
+        { id: 0, tag: 7 },
+      ],
+      kind: 2,
+      magic: 0xbeef,
+      body: null,
+    });
+    expectTypeOf(Schema.zero()).toEqualTypeOf<c.infer<typeof Schema>>();
+  });
+
+  it("returns a fresh value that writes", () => {
+    const first = Schema.zero();
+    first.points[0] = 9;
+    expect(Schema.zero().points[0]).toBe(0);
+    expect(c.read(Schema, c.write(Schema, Schema.zero()))).toEqual(
+      Schema.zero()
+    );
+  });
+
+  it("names the field when zero bytes do not decode", () => {
+    const NoZero = c.struct({ kind: c.enum({ A: 1, B: 2 }, c.u8()) });
+    expect(() => NoZero.zero()).toThrow(
+      "zero(): field 'kind' has no .default() and zero bytes do not decode"
+    );
+  });
+});
+
+describe(".nullable(sentinel)", () => {
+  const Flags = c.Bitfield(["a", "b"], c.u32());
+  const Schema = c.struct({
+    reward: c.i16().nullable(-1),
+    big: c.u64().nullable(0n),
+    flags: Flags.nullable(0xff_ff_ff_ff),
+    kind: c.enum({ A: 1, B: 2 }, c.u8()).nullable(0xff).default(null),
+    score: c.i32().nullable(-1).default(null),
+  });
+
+  it("reads the sentinel as null and writes null as the sentinel", () => {
+    const value = {
+      reward: null,
+      big: null,
+      flags: null,
+      kind: null,
+      score: null,
+    };
+    const bytes = c.write(Schema, value, "big");
+    expect([...bytes]).toEqual([
+      0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff,
+    ]);
+    expect(c.read(Schema, bytes, "big")).toEqual(value);
+  });
+
+  it("passes other values through the inner field", () => {
+    const value = {
+      reward: 2250,
+      big: 5n,
+      flags: { a: true, b: false },
+      kind: 2 as const,
+      score: 7,
+    };
+    expect(c.read(Schema, c.write(Schema, value))).toEqual(value);
+  });
+
+  it("types the field as nullable and works with defaults and zero()", () => {
+    expectTypeOf<c.infer<typeof Schema>["reward"]>().toEqualTypeOf<
+      number | null
+    >();
+    expectTypeOf<c.infer<typeof Schema>["kind"]>().toEqualTypeOf<
+      1 | 2 | null
+    >();
+    expect(Schema.zero()).toEqual({
+      reward: 0,
+      big: null,
+      flags: { a: false, b: false },
+      kind: null,
+      score: null,
+    });
+  });
+
+  it("rejects a sentinel the field cannot store", () => {
+    const Bad = c.struct({ value: c.u8().nullable(300) });
+    expect(() => c.write(Bad, { value: 1 })).toThrow(
+      "nullable(): sentinel 300 cannot be stored in this field"
+    );
   });
 });

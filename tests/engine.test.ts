@@ -10,7 +10,7 @@ describe("64-bit storage", () => {
       Flags.map((key, i) => [key, i === 0 || i === 31 || i === 39])
     );
     for (const endian of ["little", "big"] as const) {
-      const bytes = c.write(Schema, { flags }, endian);
+      const bytes = Buffer.from(c.write(Schema, { flags }, endian));
       const raw =
         endian === "little"
           ? bytes.readBigUInt64LE(0)
@@ -28,16 +28,16 @@ describe("64-bit storage", () => {
 
   it("matches a u64 magic number", () => {
     const Schema = c.struct({ magic: c.MagicNumber(0xbeef, c.u64()) });
-    const bytes = c.write(Schema, { magic: 0xbeef });
+    const bytes = Buffer.from(c.write(Schema, { magic: 0xbeef }));
     expect(bytes.readBigUInt64LE(0)).toBe(0xbeefn);
     expect(c.read(Schema, bytes).magic).toBe(0xbeef);
   });
 
   it("writes enums backed by u64", () => {
     const Schema = c.struct({ kind: c.Enum({ A: 1, B: 2 }, c.u64()) });
-    const bytes = c.write(Schema, { kind: "B" });
+    const bytes = Buffer.from(c.write(Schema, { kind: 2 }));
     expect(bytes.readBigUInt64LE(0)).toBe(2n);
-    expect(c.read(Schema, bytes).kind).toBe("B");
+    expect(c.read(Schema, bytes).kind).toBe(2);
   });
 });
 
@@ -48,7 +48,7 @@ describe("magic values on write", () => {
       tag: c.MagicString("RIFF"),
     });
     const bytes = c.write(Schema, { magic: 0x1234, tag: "RIFF" });
-    expect(bytes.toString("latin1", 2)).toBe("RIFF");
+    expect(Buffer.from(bytes).toString("latin1", 2)).toBe("RIFF");
     expect(() =>
       c.write(Schema, { magic: 0x9999 as 0x1234, tag: "RIFF" })
     ).toThrow("write failed at magic: Magic number mismatch");

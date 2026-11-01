@@ -85,7 +85,7 @@ A struct with its own `endian` ignores the call-site byte order, even when neste
 ## Writing into an existing buffer
 
 ```ts
-const file = Buffer.alloc(1024);
+const file = new Uint8Array(1024);
 c.write(Header, header, { into: file, offset: 16 });
 Header.writeInto(file, header, 16); // same
 ```

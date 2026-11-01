@@ -28,7 +28,7 @@ export function isStructSchema(
 }
 
 function classStruct(instance: object): cImpl.Struct {
-  return getClassStruct(instance.constructor as ClassCtor) as cImpl.Struct;
+  return getClassStruct(instance.constructor as ClassCtor);
 }
 
 /**
@@ -81,7 +81,7 @@ export function read(
     );
   }
   if (isClassCtor(target)) {
-    return (getClassStruct(target) as cImpl.Struct).readNew(
+    return getClassStruct(target).readNew(
       buffer,
       resolved.offset,
       resolved.endian
@@ -109,21 +109,21 @@ export function write<F extends cImpl.StructFields>(
   schema: cImpl.Struct<F>,
   data: cImpl.input<cImpl.Struct<F>>,
   endianOrOptions?: WriteArg
-): Buffer;
+): Uint8Array;
 export function write<A extends CArray<any, any, any>>(
   array: A,
   data: cImpl.input<A>,
   endianOrOptions?: WriteArg
-): Buffer;
+): Uint8Array;
 export function write<T extends object>(
   instance: T,
   endianOrOptions?: WriteArg
-): Buffer;
+): Uint8Array;
 export function write(
   target: unknown,
   arg2?: unknown,
   arg3?: WriteArg
-): Buffer {
+): Uint8Array {
   if (isStructSchema(target) || isCArray(target)) {
     if (arg2 === undefined || arg2 === "little" || arg2 === "big") {
       throw new Error("c.write(schema, data) requires a data object");
@@ -195,7 +195,7 @@ export function offsetof(target: unknown, path: string): number {
     return target.offsetOf(path);
   }
   if (isClassCtor(target)) {
-    return (getClassStruct(target) as cImpl.Struct).offsetOf(path);
+    return getClassStruct(target).offsetOf(path);
   }
   if (isClassInstance(target)) {
     return classStruct(target).offsetOf(path);

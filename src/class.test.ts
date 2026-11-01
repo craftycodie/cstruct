@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { c } from "./index";
 
 @c.class()
@@ -149,6 +149,59 @@ describe("c.class decorators", () => {
   it("supports field padding options", () => {
     expect(c.sizeof(Header)).toBe(8);
   });
+
+  it("accepts c.class() arms in c.match", () => {
+    const Tagged = c.struct({
+      kind: c.u8(),
+      body: c.match(
+        "kind",
+        { 1: c.class(Point) },
+        { fallback: c.class(Header) }
+      ),
+    });
+    expectTypeOf<c.infer<typeof Tagged>["body"]>().toEqualTypeOf<
+      Point | Header
+    >();
+    expect(Tagged.size).toBe(1 + c.sizeof(Header));
+
+    const point = c.read(
+      Tagged,
+      c.write(Tagged, { kind: 1, body: { x: 3, y: 4 } })
+    );
+    expect(point.body).toBeInstanceOf(Point);
+    expect(point.body).toEqual({ x: 3, y: 4 });
+
+    const header = c.read(
+      Tagged,
+      c.write(Tagged, { kind: 9, body: { magic: 1, length: 2 } })
+    );
+    expect(header.body).toBeInstanceOf(Header);
+  });
+
+  it("accepts c.class() arms in c.arm and c.when", () => {
+    const Tagged = c.struct({
+      kind: c.u8(),
+      body: c.discriminatedUnion(
+        { size: 8 },
+        c.arm(c.class(Point), (parent) => parent.kind === 1),
+        c.when(2, c.class(Header), (parent) => parent.kind as number)
+      ),
+    });
+    expectTypeOf<c.infer<typeof Tagged>["body"]>().toEqualTypeOf<
+      Point | Header | null
+    >();
+
+    const point = c.read(
+      Tagged,
+      c.write(Tagged, { kind: 1, body: { x: 3, y: 4 } })
+    );
+    expect(point.body).toBeInstanceOf(Point);
+    const header = c.read(
+      Tagged,
+      c.write(Tagged, { kind: 2, body: { magic: 1, length: 2 } })
+    );
+    expect(header.body).toBeInstanceOf(Header);
+  });
 });
 
 describe("struct/class composition", () => {
@@ -211,5 +264,22 @@ describe("struct/class composition", () => {
       expect(c.read(WorldSchema, buffer)).toEqual(data);
       expect(buffer.length).toBe(c.sizeof(WorldSchema));
     });
+  });
+});
+
+describe("Struct#zero for class layouts", () => {
+  @c.class()
+  class Defaults {
+    @c.field(c.u8())
+    kept = 5;
+
+    @c.field(c.u16())
+    unset!: number;
+  }
+
+  it("starts from new Ctor() and keeps initialized fields", () => {
+    const value = c.struct({ defaults: c.class(Defaults) }).zero().defaults;
+    expect(value).toBeInstanceOf(Defaults);
+    expect(value).toEqual({ kept: 5, unset: 0 });
   });
 });

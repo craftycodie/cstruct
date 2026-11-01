@@ -1,6 +1,6 @@
 # Bytes — `c.bytes(n)`
 
-Raw fixed-length bytes for hashes, GUIDs and opaque blobs. Reads return a copy as a `Buffer` (a `Uint8Array` where `Buffer` does not exist), so changing it never touches the source.
+Raw fixed-length bytes for hashes, GUIDs and opaque blobs. Reads return a copy as a `Uint8Array`, so changing it never touches the source.
 
 ```ts
 import { c } from "@craftycodie/cstruct";
@@ -16,7 +16,7 @@ entry.sha1.toString("hex");
 c.write(Entry, { sha1: new Uint8Array(20), size: 0 });
 ```
 
-Writes accept any `Buffer`, `Uint8Array`, `ArrayBuffer` or `DataView`. Shorter input is zero-padded. Longer input throws (`24 bytes do not fit in bytes(20)`) unless the write uses `{ checked: false }`, which truncates.
+Writes accept any `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`. Shorter input is zero-padded. Longer input throws (`24 bytes do not fit in bytes(20)`) unless the write uses `{ checked: false }`, which truncates.
 
 **C equivalent:**
 

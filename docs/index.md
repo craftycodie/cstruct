@@ -28,7 +28,7 @@ outline: false
 | Step | Description |
 | --- | --- |
 | **Define** | `c.struct({ ... })` or `@c.class()` with `@c.field(c.u32())` |
-| **Serialize** | `c.write(schema, data)` or `c.write(instance)` → `Buffer` |
+| **Serialize** | `c.write(schema, data)` or `c.write(instance)` → `Uint8Array` |
 | **Parse** | `c.read(schema, buffer)` or `c.read(instance, buffer)` |
 | **Measure** | `c.sizeof(schema \| instance \| class)` |
 
