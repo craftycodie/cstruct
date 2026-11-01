@@ -158,6 +158,39 @@ describe("custom field types", () => {
     expect(bytes[0]).toBe(5);
     expect(c.read(Schema, bytes).value).toBe(10);
   });
+
+  it("accepts field types from another copy of cstruct", () => {
+    // Another install has its own CFieldType class, so this one isn't an instance of ours.
+    class ForeignU16Le {
+      readonly options = {};
+      getSize(): number {
+        return 2;
+      }
+      getAlign(): number {
+        return 1;
+      }
+      read(buffer: Uint8Array, offset: number): number {
+        return buffer[offset] | (buffer[offset + 1] << 8);
+      }
+      write(buffer: Uint8Array, offset: number, value: number): void {
+        buffer[offset] = value & 0xff;
+        buffer[offset + 1] = value >> 8;
+      }
+    }
+    Object.defineProperty(
+      ForeignU16Le.prototype,
+      Symbol.for("@craftycodie/cstruct/CFieldType"),
+      { value: true }
+    );
+
+    const Schema = c.struct({
+      tag: c.u8(),
+      value: new ForeignU16Le() as unknown as CFieldType<number>,
+    });
+    const bytes = c.write(Schema, { tag: 1, value: 0x1234 }, "big");
+    expect([...bytes]).toEqual([1, 0x34, 0x12]);
+    expect(c.read(Schema, bytes, "big")).toEqual({ tag: 1, value: 0x1234 });
+  });
 });
 
 describe("strings", () => {

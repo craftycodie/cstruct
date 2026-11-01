@@ -8,13 +8,14 @@ import {
 import { compileType, envFor } from "./engine/codec";
 import type { BytesLike } from "./engine/ctx";
 import { runRead, runWrite } from "./engine/run";
-import { cImpl } from "./impl";
+import type { cImpl } from "./impl";
 import {
   type ReadOptions,
   resolveRead,
   resolveWrite,
   type WriteOptions,
 } from "./options";
+import { isStruct } from "./struct";
 
 export type Endian = cImpl.Endian;
 
@@ -24,7 +25,7 @@ type WriteArg = Endian | WriteOptions;
 export function isStructSchema(
   value: unknown
 ): value is cImpl.Struct<cImpl.StructFields> {
-  return value instanceof cImpl.Struct;
+  return isStruct(value);
 }
 
 function classStruct(instance: object): cImpl.Struct {

@@ -39,6 +39,17 @@ export function alignOf(type: unknown): number {
   return typeof getAlign === "function" ? getAlign.call(type) : 1;
 }
 
+// Marks field types made by any copy of cstruct: two installs (or a linked package and its
+// consumer) each have their own CFieldType class, so instanceof can't see across them.
+const k_field_type_brand = Symbol.for("@craftycodie/cstruct/CFieldType");
+Object.defineProperty(CFieldType.prototype, k_field_type_brand, {
+  value: true,
+});
+
 export function isCFieldType(value: unknown): value is CFieldType<any, any> {
-  return value instanceof CFieldType;
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<symbol, unknown>)[k_field_type_brand] === true
+  );
 }

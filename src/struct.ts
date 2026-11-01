@@ -395,7 +395,7 @@ export class Struct<F extends StructFields = StructFields> {
         cursor = cursorFor(cursor.type as FieldType);
         continue;
       }
-      if (cursor.type instanceof Struct) {
+      if (isStruct(cursor.type)) {
         const field = (cursor.type.layout as Layout).fields.find(
           (candidate) => candidate.name === segment
         );
@@ -441,6 +441,18 @@ export class Struct<F extends StructFields = StructFields> {
   getAlign(): number {
     return this.layout.align;
   }
+}
+
+// Marks structs made by any copy of cstruct, as isCFieldType does for field types.
+const k_struct_brand = Symbol.for("@craftycodie/cstruct/Struct");
+Object.defineProperty(Struct.prototype, k_struct_brand, { value: true });
+
+export function isStruct(value: unknown): value is Struct {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<symbol, unknown>)[k_struct_brand] === true
+  );
 }
 
 type InferType<T> =
