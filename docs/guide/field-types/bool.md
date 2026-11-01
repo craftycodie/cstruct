@@ -1,12 +1,12 @@
-# Boolean — `c.Bool()`
+# Boolean — `c.bool()`
 
-One byte: `0` is false, any non-zero byte reads as true; writes `0` or `1` (matches blf_lib `Bool`):
+One byte: `0` reads as false and any other value as true. Writes `0` or `1`.
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
 const AuthorFlags = c.struct({
-  is_online: c.Bool(),
+  is_online: c.bool(),
 });
 ```
 
@@ -18,6 +18,4 @@ typedef struct {
 } AuthorFlags;
 ```
 
-(`bool is_online` is also one byte on most ABIs, but game formats usually use an explicit integer type.)
-
-For combinable flag bits in one integer, use [Bitfield](./bitfield.md) instead.
+For combinable flag bits in one integer, use [Bitfield](./bitfield.md).

@@ -1,10 +1,18 @@
 // biome-ignore-all lint/performance/noNamespaceImport: cImpl wires struct and factory modules via export import
-import type { CArray } from "./array";
+import { type CArray, CArray as CArrayClass } from "./array";
+import { installChain } from "./chain";
 import { setStructFactory } from "./class";
 import * as fieldFactories from "./factories";
-import type { FieldType, FieldOptions as IFieldOptions } from "./field";
-import type { Endian as EndianType } from "./field-type";
+import {
+  CAnnotatedField,
+  CClassField,
+  CStructField,
+  type FieldType,
+  type FieldOptions as IFieldOptions,
+} from "./field";
+import { CFieldType, type Endian as EndianType } from "./field-type";
 import * as structCore from "./struct";
+import { CDiscriminatedUnion } from "./unions";
 
 export namespace cImpl {
   export type FieldOptions = IFieldOptions;
@@ -16,6 +24,8 @@ export namespace cImpl {
   export type StructSchemaToTS<F extends StructFields> =
     structCore.StructSchemaToTS<F>;
   export type infer<T> = structCore.infer<T>;
+  export type input<T> = structCore.input<T>;
+  export type output<T> = structCore.output<T>;
   export type UnionOf<
     Arms extends readonly import("./unions").UnionArmInput[],
   > = structCore.UnionOf<Arms>;
@@ -23,16 +33,22 @@ export namespace cImpl {
 
   export import endian = fieldFactories.endian;
   export import array = fieldFactories.array;
+  export import string = fieldFactories.string;
+  export import wstring = fieldFactories.wstring;
   export import String = fieldFactories.String;
   export import WString = fieldFactories.WString;
   export import Time64 = fieldFactories.Time64;
+  export import bits = fieldFactories.bits;
   export import bool = fieldFactories.bool;
+  export import bytes = fieldFactories.bytes;
   export import MagicNumber = fieldFactories.MagicNumber;
   export import MagicString = fieldFactories.MagicString;
+  export import union = fieldFactories.union;
   export import Bitfield = fieldFactories.Bitfield;
   export import Enum = fieldFactories.Enum;
   export import Union = fieldFactories.Union;
   export import discriminatedUnion = fieldFactories.discriminatedUnion;
+  export import match = fieldFactories.match;
   export import arm = fieldFactories.arm;
   export import when = fieldFactories.when;
   export import u8 = fieldFactories.u8;
@@ -54,4 +70,16 @@ export namespace cImpl {
   > = CArray<T, N>;
 }
 
-setStructFactory((fields) => cImpl.struct(fields));
+setStructFactory((fields, options, ctor) =>
+  cImpl.struct(fields, options).bindClass(ctor)
+);
+
+installChain(
+  CFieldType.prototype,
+  structCore.Struct.prototype,
+  CArrayClass.prototype,
+  CDiscriminatedUnion.prototype,
+  CStructField.prototype,
+  CClassField.prototype,
+  CAnnotatedField.prototype
+);

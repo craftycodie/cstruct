@@ -1,0 +1,78 @@
+{
+  "compiler": "clang 22.1.8 --target=x86_64-pc-linux-gnu",
+  "structs": {
+    "Mixed": {
+      "size": 32,
+      "align": 8,
+      "offsets": {
+        "a": 0,
+        "b": 4,
+        "c": 8,
+        "d": 16,
+        "e": 24
+      }
+    },
+    "Nested": {
+      "size": 48,
+      "align": 8,
+      "offsets": {
+        "tag": 0,
+        "inner": 8,
+        "tail": 40
+      }
+    },
+    "Pack2": {
+      "size": 18,
+      "align": 2,
+      "offsets": {
+        "a": 0,
+        "b": 2,
+        "c": 6,
+        "d": 8,
+        "e": 16
+      }
+    },
+    "Pack4": {
+      "size": 24,
+      "align": 4,
+      "offsets": {
+        "a": 0,
+        "b": 4,
+        "c": 8,
+        "d": 12,
+        "e": 20
+      }
+    },
+    "Misc": {
+      "size": 40,
+      "align": 8,
+      "offsets": {
+        "flag": 0,
+        "f": 8,
+        "name": 16,
+        "g": 24,
+        "wide": 28,
+        "s": 34
+      }
+    },
+    "HoldsPacked": {
+      "size": 12,
+      "align": 4,
+      "offsets": {
+        "x": 0,
+        "p": 1,
+        "y": 8
+      }
+    },
+    "Arrays": {
+      "size": 20,
+      "align": 4,
+      "offsets": {
+        "a": 0,
+        "grid": 1,
+        "b": 8,
+        "pts": 12
+      }
+    }
+  }
+}

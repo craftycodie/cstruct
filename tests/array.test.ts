@@ -51,14 +51,14 @@ describe("arrays", () => {
   it("round-trips primitive arrays", () => {
     const sample = { values: [1, 2, 3] as [number, number, number] };
     const bytes = c.write(WithPrimitiveArray, sample, "little");
-    expect(bytes).toEqual(Buffer.from([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]));
+    expect(bytes).toEqual(new Uint8Array([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]));
     expect(c.read(WithPrimitiveArray, bytes, "little")).toEqual(sample);
   });
 
   it("round-trips length-1 arrays as arrays (not scalars)", () => {
     const sample = { value: [42] as [number] };
     const bytes = c.write(WithLengthOneArray, sample, "little");
-    expect(bytes).toEqual(Buffer.from([42, 0, 0, 0]));
+    expect(bytes).toEqual(new Uint8Array([42, 0, 0, 0]));
     expect(c.read(WithLengthOneArray, bytes, "little")).toEqual(sample);
     expect(() =>
       c.write(WithLengthOneArray, { value: 42 as never }, "little")
@@ -83,7 +83,7 @@ describe("arrays", () => {
   });
 
   it("round-trips enum arrays", () => {
-    const sample = { statuses: ["Ok", "Error"] as ["Ok", "Error"] };
+    const sample = { statuses: [Status.Ok, Status.Error] as [0, 1] };
     const written = c.write(WithEnumArray, sample, "little");
     expect(c.read(WithEnumArray, written, "little")).toEqual(sample);
   });
@@ -125,13 +125,21 @@ describe("arrays", () => {
     expect(c.read(WithBitfieldArray, written, "little")).toEqual(sample);
   });
 
-  it("allocates nested arrays", () => {
-    expect(c.sizeof(WithNestedArray)).toBe(12);
+  it("lays out nested arrays like C (u32 matrix[3][2] is 24 bytes)", () => {
+    expect(c.sizeof(WithNestedArray)).toBe(24);
+    const matrix: [[number, number], [number, number], [number, number]] = [
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ];
+    const bytes = c.write(WithNestedArray, { matrix }, "little");
+    expect(Buffer.from(bytes).readUInt32LE(8)).toBe(3);
+    expect(c.read(WithNestedArray, bytes, "little")).toEqual({ matrix });
   });
 
   it("rejects invalid enum value in array element", () => {
     expect(() =>
-      c.write(WithEnumArray, { statuses: ["Ok", "bogus"] as never }, "little")
-    ).toThrow("Invalid enum key");
+      c.write(WithEnumArray, { statuses: [0, 7] as never }, "little")
+    ).toThrow("7 is not a valid enum value");
   });
 });

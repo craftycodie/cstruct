@@ -138,7 +138,7 @@ describe("c.discriminatedUnion", () => {
 
   it("zero-fills inactive union slots on write", () => {
     const buffer = c.write(DiscriminatedHostSchema, { kind: 0, data: null });
-    expect(buffer.subarray(1, 5).equals(Buffer.alloc(4))).toBe(true);
+    expect(buffer.subarray(1, 5)).toEqual(new Uint8Array(4));
   });
 
   it("throws when writing non-null data with no matching arm", () => {

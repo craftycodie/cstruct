@@ -57,6 +57,7 @@ export default defineConfig({
           { text: "Quick start", link: "/guide/quick-start" },
           { text: "Class decorators", link: "/guide/class-decorators" },
           { text: "Type helpers", link: "/guide/type-helpers" },
+          { text: "Modifiers", link: "/guide/modifiers" },
         ],
       },
       {
@@ -67,6 +68,7 @@ export default defineConfig({
           { text: "Unions", link: "/guide/unions" },
           { text: "Enums", link: "/guide/enums" },
           { text: "Arrays", link: "/guide/arrays" },
+          { text: "Alignment & byte order", link: "/guide/layout" },
         ],
       },
       {
@@ -77,9 +79,11 @@ export default defineConfig({
           { text: "Custom types", link: "/guide/field-types/custom-types" },
           { text: "Bool", link: "/guide/field-types/bool" },
           { text: "String", link: "/guide/field-types/string" },
-          { text: "WString", link: "/guide/field-types/wstring" },
+          { text: "Wide string", link: "/guide/field-types/wstring" },
+          { text: "Bytes", link: "/guide/field-types/bytes" },
           { text: "Time64", link: "/guide/field-types/time64" },
           { text: "Bitfield", link: "/guide/field-types/bitfield" },
+          { text: "Bit-fields", link: "/guide/field-types/bits" },
           { text: "Magic fields", link: "/guide/field-types/magic" },
         ],
       },
@@ -93,7 +97,8 @@ export default defineConfig({
       {
         text: "Reference",
         items: [
-          { text: "Struct I/O API", link: "/guide/api" },
+          { text: "API reference", link: "/guide/api" },
+          { text: "Performance", link: "/guide/performance" },
           { text: "Changelog", link: "/changelog" },
         ],
       },

@@ -23,7 +23,7 @@ describe("padding", () => {
     expect(read.seconds).toBe(90);
 
     const written = c.write(FilmMetadata, { seconds: 42 }, "little");
-    expect(written.subarray(4)).toEqual(Buffer.alloc(12));
+    expect(written.subarray(4)).toEqual(new Uint8Array(12));
   });
 
   it("honors padBefore and padAfter on fields", () => {
