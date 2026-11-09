@@ -1,52 +1,70 @@
 # Primitives & padding
 
-Packed integers and IEEE floats. Multi-byte types honor the endian passed to `c.read` / `c.write` (`"little"` default, or `"big"`).
-
-## Primitive types
-
-| cstruct | C type (`<stdint.h>` / `<stddef.h>`) | Size | JavaScript |
-| --- | --- | ---: | --- |
-| `u8` | `uint8_t` | 1 | `number` |
-| `u16` | `uint16_t` | 2 | `number` |
-| `u32` | `uint32_t` | 4 | `number` |
-| `u64` | `uint64_t` | 8 | `bigint` |
-| `i8` | `int8_t` | 1 | `number` |
-| `i16` | `int16_t` | 2 | `number` |
-| `i32` | `int32_t` | 4 | `number` |
-| `i64` | `int64_t` | 8 | `bigint` |
-| `f32` | `float` | 4 | `number` |
-| `f64` | `double` | 8 | `number` |
-
-Use these names in `@c.field("u32")`, `c.enum("i8", …)`, `c.bitfield("u32", …)`, and anywhere else a storage primitive is required. `c.sizeof("u32")` returns the size column in bytes.
-
-For a one-byte true/false slot (not a single-bit flag), see `c.Bool()` in [Boolean](./advanced-fields/bool.md) — typically `uint8_t` or `bool` in C, not a row in this table.
-
-## Field padding
-
-Insert zero bytes around a field with `pad_before` / `pad_after`:
-
 ```ts
-@c.struct()
-class Header {
-  @c.field("u16")
-  magic!: number;
+import { c } from "@craftycodie/cstruct";
 
-  @c.field("u32", { pad_before: 2, pad_after: 4 })
-  length!: number;
-}
+const Layout = c.struct({
+  magic: c.u16(),
+  size: c.u32(),
+  flags: c.u8().padAfter(3),
+});
 ```
 
-Reserve bytes inside the layout with `c.pad(n)`:
+| Factory | Size | TypeScript type |
+| --- | --- | --- |
+| `c.u8()`, `c.i8()` | 1 | `number` |
+| `c.u16()`, `c.i16()` | 2 | `number` |
+| `c.u32()`, `c.i32()`, `c.f32()` | 4 | `number` |
+| `c.f64()` | 8 | `number` |
+| `c.u64()`, `c.i64()` | 8 | `bigint` |
+| `c.bool()` | 1 | `boolean` |
+
+## Checked writes
+
+Integer writes are validated by default. A value must be an integer that fits the field's bit width **as either signed or unsigned**, so the common C idiom of writing `-1` to a `u32` (giving `0xffffffff`) still works:
 
 ```ts
-@c.struct()
-class Slot {
-  @c.field("u8")
-  tag!: number;
+c.write(Layout, { magic: 70000, size: 0, flags: 0 });
+// CStructError: write failed at magic: 70000 is out of range for u16
 
-  @c.field(c.pad(3))
-  private _reserved!: never;
-}
+c.write(Layout, { magic: 1, size: -1, flags: 0 }); // size = 0xffffffff
 ```
 
-This matches common game formats — for example a 4-byte film metadata slot with `i32` + 12 reserved bytes (see [Example structures](/guide/example-structures)).
+Pass `{ checked: false }` to wrap out-of-range values instead:
+
+```ts
+c.write(Layout, data, { checked: false });
+```
+
+A missing or wrongly typed value always throws (`expected number, got undefined`); it is never written as 0.
+
+## Padding
+
+`c.pad(n)` reserves `n` zero bytes. Padding fields are left out of read results and write inputs.
+
+```ts
+const Header = c.struct({
+  magic: c.u16(),
+  _reserved: c.pad(2),
+  length: c.u32(),
+});
+```
+
+Or attach padding to a field with `.padBefore(n)` / `.padAfter(n)` (or the `{ padBefore, padAfter }` options):
+
+```ts
+const Header = c.struct({
+  magic: c.u16(),
+  length: c.u32().padBefore(2).padAfter(4),
+});
+```
+
+To let cstruct insert the padding a C compiler would, use [alignment](./layout.md#alignment).
+
+## Endianness
+
+Little-endian by default. Choose per call, per struct, or per field. See [Layout](./layout.md#endianness).
+
+```ts
+c.read(Layout, bytes, "big");
+```

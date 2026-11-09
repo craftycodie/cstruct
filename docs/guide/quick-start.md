@@ -1,41 +1,79 @@
 # Quick start
 
-Everything public lives on the `c` namespace: decorators, field helpers, and struct I/O.
+Everything public lives on the `c` object: schema factories, decorators, and I/O.
+
+## Schema-first
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class Example {
-  @c.field("u32")
-  value!: number;
-}
+const Header = c.struct({
+  magic: c.MagicString("HDR1"),
+  version: c.u16().default(2),
+  length: c.u32(),
+});
 
-const bytes = c.write(Example, { value: 42 } as Example, "big");
-const instance = c.read(Example, bytes, "big");
+const bytes = c.write(Header, { length: 42 }, "big"); // magic and version filled in
+const header = c.read(Header, bytes, "big");
 
-console.log(instance.value); // 42
-console.log(c.sizeof(Example)); // 4
+console.log(header.length); // 42
+console.log(c.sizeof(Header)); // 10
 ```
 
-**C equivalent** — a plain struct with no padding between members when that is all you declare:
+Schemas also carry the same operations as methods: `Header.read(bytes)`, `Header.write(data)`, `Header.size`, `Header.offsetOf("length")`.
 
-```c
-typedef struct {
-    uint32_t value; /* c.field("u32") — 4 bytes; endian from c.read / c.write */
-} Example;
-```
-
-- `c.read(ctor, bytes, endian?)` — parse into a new instance (`endian`: `"little"` default or `"big"`). Slice the buffer first if the struct does not start at index 0.
-- `c.write(ctor, instance, endian?)` — serialize to a new `Uint8Array`.
-- `c.sizeof(ctor)` — total packed size in bytes (`c.sizeof("u32")` → `4` for primitives).
-- `c.json(ctor, instance)` — struct fields as a JSON-friendly object.
-
-Read from an offset inside a larger buffer (file header + payload, chunk tables, etc.):
+## Types
 
 ```ts
-const file = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 42]);
-const atEnd = c.read(Example, file.subarray(4), "big");
+type Header = c.infer<typeof Header>;
+// { magic: "HDR1"; version: number; length: number }
+
+type HeaderInput = c.input<typeof Header>;
+// { length: number; magic?: "HDR1"; version?: number }
 ```
 
-Next: [Primitives & padding](/guide/primitives).
+See [Type helpers](./type-helpers.md).
+
+## Class decorators
+
+```ts
+@c.class()
+class Header {
+  @c.field(c.u16())
+  version = 0;
+
+  @c.field(c.u32())
+  length = 0;
+}
+
+const header = c.read(Header, bytes); // new Header instance
+header.length += 1;
+const out = c.write(header);
+```
+
+Mix schemas and decorated classes with `c.class(Ctor)`. See [Class decorators](./class-decorators.md).
+
+## I/O
+
+| Call | Result |
+| --- | --- |
+| `c.read(schema, bytes, offset?, endian?)` | Decoded object |
+| `c.read(schema, bytes, { offset, endian })` | Same, with options |
+| `c.read(Class, bytes, …)` | New class instance |
+| `c.read(instance, bytes, …)` | Fills and returns `instance` |
+| `c.write(schema, data, endian?)` | New `Uint8Array` |
+| `c.write(schema, data, { endian, into, offset, checked })` | Writes into `into` when given |
+| `c.write(instance, endianOrOptions?)` | New `Uint8Array` |
+| `c.sizeof(schema \| class \| instance \| field)` | Size in bytes |
+| `c.offsetof(schema \| class, "a.b[2].c")` | Byte offset of a field |
+
+`bytes` can be a `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`.
+
+Read from an offset inside a larger buffer:
+
+```ts
+const file = new Uint8Array(16);
+const header = c.read(Header, file, { offset: 4, endian: "big" });
+```
+
+Next: [Primitives & padding](./primitives.md).

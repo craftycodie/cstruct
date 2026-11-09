@@ -1,0 +1,179 @@
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  compileType,
+  type Parent,
+  readWith,
+  writeWith,
+} from "./engine/codec";
+import {
+  type CClassField,
+  type FieldOptions,
+  type FieldType,
+  unwrapFieldType,
+} from "./field";
+import { alignOf, CFieldType, type Endian } from "./field-type";
+import type { infer as Infer } from "./struct";
+
+/** A `c.match` arm: a schema or field type, or `c.class(Ctor)`. */
+export type MatchArm = FieldType | CClassField<any, any, any>;
+
+/** Arm schemas keyed by discriminant value (numbers, enum keys, strings). */
+export type MatchArms = Readonly<Record<string | number, MatchArm>>;
+
+export interface MatchOptions<Fallback extends MatchArm | undefined = undefined>
+  extends FieldOptions {
+  /** Arm used when the discriminant matches no key. Default: decode as null. */
+  fallback?: Fallback;
+  /** Slot size in bytes. Default: the largest arm (and fallback). */
+  size?: number;
+}
+
+export type MatchValue<
+  Arms extends MatchArms,
+  Fallback extends MatchArm | undefined,
+> =
+  | { [K in keyof Arms]: Infer<Arms[K]> }[keyof Arms]
+  | (Fallback extends MatchArm ? Infer<Fallback> : null);
+
+const PATH_SEPARATOR = ".";
+
+/**
+ * A union slot whose arm is chosen by a discriminant elsewhere in the parent
+ * record, named by a dot path:
+ *
+ *   c.match("general.file_type", { 3: Film, 4: Film, 6: Variant })
+ *
+ * Keys are compared as strings, so numeric codes, enum key names and bigints
+ * all work. The slot is as large as the largest arm unless `size` is given;
+ * unused bytes are zero on write.
+ */
+export class CMatch<
+  const Arms extends MatchArms,
+  const Fallback extends MatchArm | undefined = undefined,
+  const O extends MatchOptions<Fallback> = MatchOptions<Fallback>,
+> extends CFieldType<MatchValue<Arms, Fallback>, O> {
+  readonly path: string;
+  readonly arms: Arms;
+  private readonly keys: string[];
+  /** Field type of each arm, in `keys` order (`c.class` arms unwrapped). */
+  private readonly types: FieldType[];
+  private readonly fallbackType: FieldType | undefined;
+  private readonly slotSize: number;
+
+  constructor(path: string, arms: Arms, options?: O) {
+    super(options);
+    this.path = path;
+    this.arms = arms;
+    this.keys = Object.keys(arms);
+    if (this.keys.length === 0) {
+      throw new Error("c.match needs at least one arm");
+    }
+    this.types = this.keys.map((key) => unwrapFieldType(arms[key]));
+    this.fallbackType =
+      options?.fallback === undefined
+        ? undefined
+        : unwrapFieldType(options.fallback);
+    const types = this.armTypes();
+    const largest = Math.max(...types.map((type) => type.getSize()));
+    if (options?.size !== undefined && options.size < largest) {
+      throw new RangeError(
+        `c.match size ${options.size} is smaller than its largest arm (${largest} bytes)`
+      );
+    }
+    this.slotSize = options?.size ?? largest;
+  }
+
+  private armTypes(): FieldType[] {
+    return this.fallbackType ? [...this.types, this.fallbackType] : this.types;
+  }
+
+  getSize(): number {
+    return this.slotSize;
+  }
+
+  getAlign(): number {
+    return Math.max(1, ...this.armTypes().map(alignOf));
+  }
+
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    endian: Endian,
+    parent: Record<string, unknown> = {}
+  ): MatchValue<Arms, Fallback> {
+    return readWith(this, buffer, offset, endian, parent);
+  }
+
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    value: MatchValue<Arms, Fallback> | null | undefined,
+    endian: Endian,
+    parent: Record<string, unknown> = {}
+  ): void {
+    writeWith(this, buffer, offset, value, endian, parent);
+  }
+
+  [COMPILE](env: CompileEnv): Codec<unknown> {
+    const { path, keys, slotSize } = this;
+    const armTypes = this.types;
+    const fallbackType = this.fallbackType;
+    const segments = path.split(PATH_SEPARATOR);
+    const discriminant = (parent: Parent): unknown => {
+      let value: unknown = parent;
+      for (const segment of segments) {
+        value = (value as Parent | null | undefined)?.[segment];
+      }
+      return value;
+    };
+    const indexByKey = new Map(keys.map((key, i) => [key, i]));
+    const codecs = armTypes.map((type) => compileType(type, env));
+    const sizes = armTypes.map((type) => type.getSize());
+    const fallback = fallbackType
+      ? { codec: compileType(fallbackType, env), size: fallbackType.getSize() }
+      : undefined;
+
+    const select = (parent: Parent) => {
+      const index = indexByKey.get(String(discriminant(parent)));
+      if (index !== undefined) {
+        return { codec: codecs[index], size: sizes[index] };
+      }
+      return fallback;
+    };
+
+    return {
+      usesParent: true,
+      read: (ctx, at, parent) => {
+        const arm = select(parent);
+        return arm ? arm.codec.read(ctx, at, parent) : null;
+      },
+      write: (ctx, at, value, parent) => {
+        if (value === null || value === undefined) {
+          ctx.u8.fill(0, at, at + slotSize);
+          return;
+        }
+        const arm = select(parent);
+        if (!arm) {
+          throw new Error(
+            `c.match: no arm for ${path} = ${String(discriminant(parent))}`
+          );
+        }
+        arm.codec.write(ctx, at, value, parent);
+        ctx.u8.fill(0, at + arm.size, at + slotSize);
+      },
+    };
+  }
+}
+
+export function match<
+  const Arms extends MatchArms,
+  const Fallback extends MatchArm | undefined = undefined,
+>(
+  path: string,
+  arms: Arms,
+  options?: MatchOptions<Fallback>
+): CMatch<Arms, Fallback> {
+  return new CMatch(path, arms, options);
+}

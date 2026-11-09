@@ -1,37 +1,36 @@
-# Install & setup
-
-## Install
+# Install
 
 ```bash
 npm install @craftycodie/cstruct
 ```
 
-## Decorator requirements
+## TypeScript
 
-cstruct uses [Stage 3 decorators](https://github.com/tc39/proposal-decorators). Your compiler or test runner must enable them:
+Schema-only usage (`c.struct({ ... })`) needs no configuration.
 
-| Tool | Setting |
-|------|---------|
-| TypeScript 5+ | `"experimentalDecorators": false`, `"useDefineForClassFields": true` |
-| SWC / Vitest | `decoratorVersion: "2022-03"`, `legacyDecorator: false` |
+`@c.class()` / `@c.field()` work with either decorator mode:
 
-Import from `@craftycodie/cstruct` before any `@c.struct()` class so the `Symbol.metadata` polyfill is installed.
+- **Standard decorators** (TypeScript 5+ default, `experimentalDecorators` off). cstruct installs the `Symbol.metadata` polyfill itself.
+- **Legacy decorators** (`"experimentalDecorators": true`).
 
-## Struct I/O
-
-After `@c.struct()`, use `c.read`, `c.write`, `c.sizeof`, and `c.json` with the class constructor:
-
-```ts
-import { c } from "@craftycodie/cstruct";
-
-@c.struct()
-class Header {
-  @c.field("u32")
-  length!: number;
+```json
+{
+  "compilerOptions": {
+    "strictPropertyInitialization": false
+  }
 }
-
-const bytes = c.write(Header, { length: 100 } as Header);
-const value = c.read(Header, bytes);
 ```
 
-The [Quick start](/guide/quick-start) page walks through a full example.
+`strictPropertyInitialization: false` (or `!` on fields, or initializers like `x = 0`) avoids errors for fields that `c.read` fills in.
+
+::: warning esbuild, Vite, Vitest and tsx with standard decorators
+esbuild rejects `@c.class()` in standard-decorator mode because `class` is a reserved word (TypeScript accepts it, and the decorators spec allows it). With those tools, either enable `experimentalDecorators`, or write `@(c.class())`.
+:::
+
+## Runtimes
+
+Node.js 18+, Bun, Deno and browsers. Reads accept a `Uint8Array` (including a Node `Buffer`), `ArrayBuffer` or `DataView`. `c.write` returns a `Uint8Array` on every runtime, and the types need no `@types/node`.
+
+Without `Buffer`, `c.string` supports the `utf8`, `latin1` and `ascii` encodings; `hex` and `base64` need `Buffer`.
+
+Code generation uses `new Function`. Where that is blocked (a Content Security Policy, Cloudflare Workers) cstruct falls back to an interpreter automatically. See [Performance](./performance.md).

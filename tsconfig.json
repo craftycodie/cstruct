@@ -9,11 +9,13 @@
     "moduleResolution": "bundler",
     "strict": true,
     "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
     "useDefineForClassFields": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["tests/**/*.stage3.test.ts"]
 }

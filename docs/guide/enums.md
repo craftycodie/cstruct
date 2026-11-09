@@ -1,46 +1,50 @@
 # Enums
 
-Map integer values to a fixed set with `c.enum(storage, map)`:
+`c.enum(values, storage)` stores an enum in an integer field. Like zod 4's `z.enum`, it takes a TypeScript `enum`, an object of named numbers, or a list of names:
 
 ```ts
-const Status = {
-  Ok: 0,
-  Error: 1,
-} as const;
+import { c } from "@craftycodie/cstruct";
 
-@c.struct()
-class Packet {
-  @c.field(c.enum("u8", Status))
-  status!: number;
+enum FileType {
+  Film = 3,
+  GameVariant = 6,
 }
+
+const Status = { Ok: 0, Error: 1 } as const;
+
+const Packet = c.struct({
+  file_type: c.enum(FileType, c.i8()),
+  status: c.enum(Status, c.u8()),
+  stage: c.enum(["Lobby", "Playing", "Postgame"], c.u8()), // stored as 0, 1, 2
+});
+
+type Packet = c.infer<typeof Packet>;
+// { file_type: FileType; status: 0 | 1; stage: "Lobby" | "Playing" | "Postgame" }
+
+c.write(Packet, { file_type: FileType.Film, status: Status.Error, stage: "Playing" });
 ```
 
-Values are validated on read and write. Use `pad_after` on the same field when the layout has trailing padding after a small enum storage type.
+- A TypeScript enum or an object reads and writes its **member values** (`FileType.Film`, which is `3`). A TypeScript enum's reverse mapping (`FileType[3] === "Film"`) is not a member.
+- A list reads and writes the **names**, stored as their index.
+- Any other value throws on read (`99 is not a valid enum value`) and on write.
+- Every member must be a number: string members cannot be stored in an integer, and `c.enum` throws when created. Storage can be any integer type, including `c.u64()`.
 
-**C equivalent** — integer storage with a fixed set of named constants:
-
-```c
-typedef enum {
-    Status_Ok = 0,
-    Status_Error = 1,
-} Status;
-
-typedef struct {
-    uint8_t status; /* c.enum("u8", Status) */
-} Packet;
-```
-
-You can also write the slot as a plain integer and compare against macros:
+**C equivalent:**
 
 ```c
-#define STATUS_OK    0
-#define STATUS_ERROR 1
+typedef enum { FileType_Film = 3, FileType_GameVariant = 6 } FileType;
 
 typedef struct {
+    int8_t file_type; /* c.enum(FileType, c.i8()) */
     uint8_t status;
+    uint8_t stage;
 } Packet;
 ```
 
-cstruct’s `c.enum()` is the typed version of that pattern: it checks the value is one of the allowed constants on read and write. The storage type (`u8`, `u16`, …) is the width of the integer field in the struct.
+An enum field can select a union arm: `c.match("file_type", { [FileType.Film]: Film, [FileType.GameVariant]: Variant })`. See [Unions](./unions.md#key-based-union-c-match).
 
-For combinable flag bits in one integer, see [Bitfield](./advanced-fields/bitfield.md).
+For combinable flags in one integer, see [Bitfield](./field-types/bitfield.md). For multi-bit fields, see [`c.bits`](./field-types/bits.md).
+
+::: info
+`c.Enum` is a deprecated alias of `c.enum`. Lowercase factories are C-native types; capitalized ones (`c.Time64`, `c.MagicNumber`, `c.MagicString`) are cstruct extensions.
+:::

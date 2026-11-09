@@ -1,67 +1,85 @@
 # Unions
 
-Discriminated unions pick an arm at read/write time from other fields on the parent struct.
+## Key-based union (`c.match`)
+
+A slot whose type depends on a value elsewhere in the record, the common tagged-union pattern:
 
 ```ts
-@c.struct()
-class ArmA {
-  @c.field("u8")
-  value!: number;
+const Film = c.struct({ seconds: c.i32() });
+const Variant = c.struct({ icon_index: c.u8() });
 
-  @c.field(c.pad(3))
-  private _pad!: never;
-}
+const Metadata = c.struct({
+  general: c.struct({ file_type: c.u8() }),
+  file_type_data: c.match("general.file_type", { 3: Film, 4: Film, 6: Variant }),
+});
 
-@c.struct()
-class Host {
-  @c.field("u8")
-  kind!: number;
-
-  @c.union({ size: 4 }, c.arm(ArmA, (m: Host) => m.kind === 1))
-  data: ArmA | null = null;
-}
+type Data = c.infer<typeof Metadata>["file_type_data"];
+// { seconds: number } | { icon_index: number } | null
 ```
 
-Annotate the host type in arm predicates so TypeScript knows which fields exist (`m: Host`).
+- The first argument is a dot path into the record being read or written. Only fields **before** the union are available on read.
+- Keys are compared as strings, so numeric codes (including enum members: `{ [FileType.Film]: Film }`), list-enum names and bigints all work.
+- An unknown discriminant reads as `null`. Writing `null` (or leaving the field out) zero-fills the slot.
+- The slot is as large as the largest arm. Unused bytes are zero on write.
+- An arm can be any schema or field type, or a decorated class as `c.class(Ctor)`; class arms read as instances of the class.
 
-**C equivalent** — a tag field plus a fixed-size `union` over the arm layouts. The union slot is always 4 bytes; only one arm is meaningful at a time:
+Options:
+
+```ts
+c.match("kind", { 1: A, 2: B }, {
+  size: 16, // fixed slot size (must fit the largest arm)
+  fallback: Unknown, // arm for any other discriminant, instead of null
+});
+```
+
+**C equivalent:**
 
 ```c
 typedef struct {
-    uint8_t value;
-    uint8_t _pad[3]; /* c.pad(3) */
-} ArmA;
-
-typedef struct {
-    uint8_t kind; /* discriminant — read this first */
+    struct { uint8_t file_type; } general;
     union {
-        ArmA a;           /* active when kind == 1 */
-        uint8_t raw[4];   /* same 4 bytes when no arm matches */
-    } data;
-} Host;
+        struct { int32_t seconds; } film;      /* file_type 3 or 4 */
+        struct { uint8_t icon_index; } variant; /* file_type 6 */
+    } file_type_data;
+} Metadata;
 ```
 
-`c.union({ size: 4 }, …)` reserves those four bytes in the parent struct. When no arm predicate matches, cstruct leaves the bytes as padding and sets the property to `null` — in C you would ignore `data` or treat it as uninitialized for that tag value.
+## Predicate union (`c.discriminatedUnion`)
 
-A layout with multiple arms and a larger slot (see [Example structures](./example-structures.md#content-metadata-nested-struct--unions--wide-strings)) matches the same idea: one discriminant elsewhere on the struct, then a `union { … }` sized to the largest arm (16 bytes in that example).
-
-## Shorthand: `c.when`
-
-Constant discriminant:
+When the arm depends on more than one value, select it with predicates:
 
 ```ts
-@c.union({ size: 4 }, c.when(1, ArmA, (m) => m.kind))
+const Host = c.struct({
+  file_type: c.u8(),
+  activity: c.u8(),
+  data: c.discriminatedUnion(
+    { size: 16 },
+    c.arm(FilmArm, (m) => m.file_type === 3 && m.activity !== 0),
+    c.when(6, VariantArm, (m) => m.file_type as number)
+  ),
+});
 ```
 
-## `c.unionField`
+- `c.arm(schema, when)`: predicate on the parent record
+- `c.when(value, schema, discriminant)`: shorthand for `discriminant(parent) === value`
+- Either accepts `c.class(Ctor)` in place of a schema.
 
-Same layout inside `@c.field` when the union is not a standalone property:
+Prefer `c.match` where a single field decides: its discriminant needs no casts.
+
+## Overlapping union (`c.union`)
+
+A C union where every member decodes from the same bytes:
 
 ```ts
-@c.field(
-  c.unionField({ size: 4 }, c.arm(ArmA, (m: Host) => m.kind === 1))
-)
-data: ArmA | null = null;
+const AsU32 = c.struct({ value: c.u32() });
+const AsU16Pair = c.struct({ a: c.u16(), b: c.u16() });
+
+const Overlap = c.struct({ word: c.union({ asU32: AsU32, asU16Pair: AsU16Pair }) });
+
+c.read(Overlap, bytes).word;
+// { asU32: { value: ... }, asU16Pair: { a: ..., b: ... } }
 ```
 
-When no arm matches, the union slot is treated as padding and the property is `null`.
+On write, the first member present in the value is written. A member that fails to decode (for example a magic mismatch) reads as `undefined`.
+
+`c.Union` is a deprecated alias of `c.union`.

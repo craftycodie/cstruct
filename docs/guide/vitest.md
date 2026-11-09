@@ -1,27 +1,24 @@
-# Vitest & SWC
+# Vitest
 
-If you author or test `@c.struct()` classes in your own project (not only consuming prebuilt `dist/`), configure Vitest with SWC and Stage 3 decorators:
+Schema-first `c.struct({ ... })` layouts need no test configuration.
+
+Tests that declare `@c.class()` classes are compiled by Vite's esbuild. esbuild rejects `@c.class()` in standard-decorator mode (`class` is a reserved word), so enable legacy decorators for tests:
 
 ```ts
-import swc from "unplugin-swc";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [
-    swc.vite({
-      jsc: {
-        parser: { syntax: "typescript", decorators: true },
-        transform: {
-          legacyDecorator: false,
-          decoratorVersion: "2022-03",
-          decoratorMetadata: false,
-          useDefineForClassFields: true,
-        },
-        target: "es2022",
+  esbuild: {
+    tsconfigRaw: {
+      compilerOptions: {
+        experimentalDecorators: true,
+        useDefineForClassFields: false,
       },
-    }),
-  ],
+    },
+  },
 });
 ```
 
-Consumers that only import from published `dist/` do not need this — no decorator flags required at runtime.
+To test with standard decorators instead, keep `experimentalDecorators` off and write `@(c.class())`, or compile tests with TypeScript. cstruct's own repository runs every test both ways; see its `vitest.config.ts`.
+
+Packages that only import a prebuilt `dist/` need none of this: decorators are compiled away at build time.
