@@ -2,30 +2,10 @@
 
 All notable changes to [@craftycodie/cstruct](https://www.npmjs.com/package/@craftycodie/cstruct) are documented here.
 
-## [2.0.0] — Unreleased
+## [2.0.0] — 2026-11-09
 
-Major rewrite: a schema-first, zod-style API with optional class decorators.
-
-### Added
-
-- `c.struct({ field: c.u32() })` schemas, with `c.infer`, `c.input` and `c.output` types.
-- Field types: `c.u8()` … `c.f64()`, `c.u64()`, `c.i64()`, `c.string`, `c.wstring`, `c.enum`, `c.bytes`, `c.bits`, `c.Bitfield`, `c.MagicNumber`, `c.MagicString`.
-- Unions: `c.union`, `c.discriminatedUnion` and `c.match`.
-- Field modifiers: `.array`, `.padBefore` / `.padAfter`, `.be` / `.le`, `.default`, `.nullable`, `.transform`, `.assert`.
-- Struct helpers: `extend`, `pick`, `omit`, `zero`, `offsetOf`, `writeInto`, plus `c.offsetof` and `c.sizeof`.
-- C layout options `endian`, `align` and `pack`, tested against clang.
-- `@c.class()` / `@c.field()` decorators, for standard and `experimentalDecorators` builds.
-- Compiled, code-generated readers and writers. See [Performance](./guide/performance.md).
-- `CStructError` with the operation, field path and cause.
-
-### Changed
-
-- Reads and writes use plain `Uint8Array`; `Buffer` is not needed.
-- `c.enum` follows zod 4: TypeScript enums and objects use member values, lists of names use names.
-- `c.string` holds bytes only; use `c.wstring` for UTF-16 text.
-- Reads check bounds, and writes validate values. Integers must fit their field (`{ checked: false }` wraps).
-- Nested arrays keep their inner count: `c.array(c.array(c.u32(), 2), 3)` is 24 bytes.
-- `c.String`, `c.WString`, `c.Enum`, `c.Union` and `c.Pad` are deprecated aliases.
+This is a full rewrite of the cstruct package with a zod-style API.
+The class-decorator approach from v1 is still available, but a new c.struct API allows you to handle plain-objects as well.
 
 ### Removed
 
