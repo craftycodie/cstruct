@@ -1,4 +1,4 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { c } from "../src/index";
 
 const SkullFlags = ["iron", "mythic"] as const;
@@ -35,6 +35,24 @@ describe("c.infer", () => {
       value: number;
     } | null>();
   });
+
+  it("accepts any struct where c.Struct is expected", () => {
+    const schemas: c.Struct[] = [Point, Host];
+    expect(schemas).toHaveLength(2);
+  });
+
+  it("uses tuples below 100 elements and arrays from 100 up", () => {
+    const small = c.array(c.u8(), 3);
+    const edge = c.array(c.u8(), 99);
+    const large = c.array(Point, 1000);
+    expectTypeOf<c.infer<typeof small>>().toEqualTypeOf<
+      [number, number, number]
+    >();
+    expectTypeOf<c.infer<typeof edge>["length"]>().toEqualTypeOf<99>();
+    expectTypeOf<c.infer<typeof large>>().toEqualTypeOf<
+      { x: number; y: number }[]
+    >();
+  });
 });
 
 describe("@c.field property type enforcement", () => {
@@ -48,14 +66,42 @@ describe("@c.field property type enforcement", () => {
     expectTypeOf<GoodU64>().toMatchObjectType<{ test: bigint }>();
   });
 
-  it("documents decorator field types are not enforced on properties", () => {
+  it("rejects properties that cannot hold the decoded value", () => {
     @c.class()
     class BadU64 {
+      // @ts-expect-error u64 decodes to bigint, not string
       @c.field(c.u64())
       test!: string;
+
+      // @ts-expect-error Time64 decodes to Date
+      @c.field(c.Time64())
+      when!: number;
     }
 
-    expectTypeOf<BadU64>().toMatchObjectType<{ test: string }>();
+    expect(c.sizeof(BadU64)).toBe(16);
+  });
+
+  it("accepts wider property types than the decoded value", () => {
+    @c.class()
+    class Wide {
+      @c.field(c.MagicNumber(0xbeef, c.u16()))
+      magic!: number;
+
+      @c.field(c.u8(), { count: 4 })
+      rgba!: number[];
+
+      @c.field(c.u16())
+      maybe?: number;
+
+      @c.field(c.u32())
+      private hidden!: number;
+
+      reveal(): number {
+        return this.hidden;
+      }
+    }
+
+    expect(c.sizeof(Wide)).toBe(12);
   });
 
   it("accepts matching property types on decorated classes", () => {

@@ -1,3 +1,11 @@
+import {
+  COMPILE,
+  type Codec,
+  type CompileEnv,
+  expected,
+  readWith,
+  writeWith,
+} from "../engine/codec";
 import type { FieldOptions } from "../field";
 import { CFieldType, type Endian } from "../field-type";
 
@@ -13,24 +21,31 @@ export class time64_t<const O extends FieldOptions = {}> extends CFieldType<
     return 8;
   }
 
-  read(buffer: Buffer, offset: number, endian: Endian): Date {
-    const view = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength
-    );
-    const seconds = view.getBigInt64(offset, endian === "little");
-    return new Date(Number(seconds) * 1000);
+  getAlign(): number {
+    return 8;
   }
 
-  write(buffer: Buffer, offset: number, value: Date, endian: Endian): void {
-    const view = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength
-    );
-    const seconds = BigInt(Math.trunc(value.getTime() / 1000));
-    view.setBigInt64(offset, seconds, endian === "little");
+  read(buffer: Uint8Array, offset: number, endian: Endian): Date {
+    return readWith(this, buffer, offset, endian);
+  }
+
+  write(buffer: Uint8Array, offset: number, value: Date, endian: Endian): void {
+    writeWith(this, buffer, offset, value, endian);
+  }
+
+  [COMPILE](env: CompileEnv): Codec<Date> {
+    const little = env.endian === "little";
+    return {
+      read: (ctx, at) =>
+        new Date(Number(ctx.dv.getBigInt64(at, little)) * 1000),
+      write: (ctx, at, value) => {
+        if (!(value instanceof Date)) {
+          expected("Date", value);
+        }
+        const seconds = BigInt(Math.trunc(value.getTime() / 1000));
+        ctx.dv.setBigInt64(at, seconds, little);
+      },
+    };
   }
 }
 

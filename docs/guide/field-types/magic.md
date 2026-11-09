@@ -1,6 +1,6 @@
 # Magic fields — `c.MagicNumber` / `c.MagicString`
 
-Magic fields assert expected values on read and always write the canonical value. Use them for file signatures, chunk tags, and format version guards.
+Magic fields assert the expected value on read and always write the canonical value. They are optional in write data ([`c.input`](../type-helpers.md#c-input-t)). Use them for file signatures, chunk tags and format version guards.
 
 ## `c.MagicNumber(value, type)`
 
@@ -14,12 +14,12 @@ const ChunkHeader = c.struct({
   size: c.u32(),
 });
 
-const bytes = c.write(ChunkHeader, { magic: 0xbeef, size: 128 }, "little");
+const bytes = c.write(ChunkHeader, { size: 128 }, "little"); // magic written for you
 const read = c.read(ChunkHeader, bytes, "little");
 // read.magic === 0xbeef
 
 // Wrong magic on disk throws:
-// Magic number mismatch: expected 48879, got 0 at offset 0
+// read failed at magic: Magic number mismatch: expected 48879, got 0 at offset 0
 ```
 
 **C equivalent** — a fixed constant checked after read:
@@ -33,11 +33,11 @@ typedef struct {
 } ChunkHeader;
 ```
 
-Endianness follows the surrounding `c.read` / `c.write` call.
+Byte order follows the field, struct or call. Storage can be any integer type, including `c.u64()`.
 
 ## `c.MagicString(value)`
 
-The string occupies exactly `value.length` bytes (no NUL terminator). On read, bytes must match exactly:
+The string occupies its UTF-8 byte length (no NUL terminator). On read, the bytes must match exactly:
 
 ```ts
 const BlfHeader = c.struct({
@@ -45,7 +45,7 @@ const BlfHeader = c.struct({
   chunk_length: c.u32(),
 });
 
-c.write(BlfHeader, { signature: "chdr", chunk_length: 4096 }, "big");
+c.write(BlfHeader, { chunk_length: 4096 }, "big");
 ```
 
 Reach BLF chunks use this pattern — see [Example structures](../example-structures.md#blf-chdr-chunk-big-endian).
@@ -59,7 +59,7 @@ typedef struct {
 } BlfHeader;
 ```
 
-On write you still pass the magic value in the data object; the field always encodes the canonical string.
+If write data includes a magic value, it must equal the constant; anything else throws.
 
 ## Decorators
 

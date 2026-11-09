@@ -1,6 +1,11 @@
+import type { Chainable } from "./chain";
 import type { FieldOptions } from "./field";
 
 export type Endian = "little" | "big";
+
+// Chain methods (.array, .default, .transform, ...) are installed at startup by chain.ts.
+// biome-ignore lint/correctness/noUnusedVariables: type parameters must match the class they merge into
+export interface CFieldType<T, O extends FieldOptions = {}> extends Chainable {}
 
 export abstract class CFieldType<T, const O extends FieldOptions = {}> {
   readonly options: O;
@@ -10,15 +15,41 @@ export abstract class CFieldType<T, const O extends FieldOptions = {}> {
   }
 
   abstract getSize(): number;
-  abstract read(buffer: Buffer, offset: number, endian: Endian): T;
+
+  /**
+   * Natural alignment in bytes, used by structs declared with `align` or
+   * `pack`. Defaults to 1; override for custom types that C would align.
+   */
+  getAlign(): number {
+    return 1;
+  }
+
+  abstract read(buffer: Uint8Array, offset: number, endian: Endian): T;
   abstract write(
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset: number,
     value: T,
     endian: Endian
   ): void;
 }
 
+/** Natural alignment of any field type; 1 when it does not declare one. */
+export function alignOf(type: unknown): number {
+  const getAlign = (type as { getAlign?: () => number } | null)?.getAlign;
+  return typeof getAlign === "function" ? getAlign.call(type) : 1;
+}
+
+// Marks field types made by any copy of cstruct: two installs (or a linked package and its
+// consumer) each have their own CFieldType class, so instanceof can't see across them.
+const k_field_type_brand = Symbol.for("@craftycodie/cstruct/CFieldType");
+Object.defineProperty(CFieldType.prototype, k_field_type_brand, {
+  value: true,
+});
+
 export function isCFieldType(value: unknown): value is CFieldType<any, any> {
-  return value instanceof CFieldType;
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<symbol, unknown>)[k_field_type_brand] === true
+  );
 }

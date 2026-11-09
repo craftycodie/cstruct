@@ -1,6 +1,6 @@
 # Unix time — `c.Time64()`
 
-8-byte unsigned seconds since epoch, exposed as `Date` in TypeScript:
+8-byte signed seconds since the Unix epoch, exposed as a `Date`. Writes truncate to whole seconds.
 
 ```ts
 import { c } from "@craftycodie/cstruct";
@@ -14,8 +14,8 @@ const Event = c.struct({
 
 ```c
 typedef struct {
-    uint64_t when; /* seconds since 1970-01-01 UTC */
+    int64_t when; /* time_t: seconds since 1970-01-01 UTC */
 } Event;
 ```
 
-Use the same endianness as the surrounding struct (`"little"` / `"big"` in `c.read` / `c.write`).
+Byte order follows the field, struct or call like any other field.

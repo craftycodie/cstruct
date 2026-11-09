@@ -1,21 +1,21 @@
-# Wide string — `c.WString(n)`
+# Wide string — `c.wstring(n)`
 
-Fixed-size UTF-16LE wchar slot. The argument `n` is the **character capacity** (byte size is `n * 2`). Reads and writes little-endian UTF-16 unless the buffer looks like mis-encoded UTF-8 (see implementation notes in source).
+Fixed-size UTF-16 array. `n` is the **character capacity**; the slot is `n * 2` bytes. Code units follow the field's byte order, so a big-endian struct stores UTF-16BE. Reads stop at the first NUL code unit.
 
 ```ts
 import { c } from "@craftycodie/cstruct";
 
 const Label = c.struct({
-  text: c.WString(32),
+  text: c.wstring(32), // 64 bytes
 });
 ```
 
-**C equivalent** (64 bytes on disk):
+**C equivalent:**
 
 ```c
 typedef struct {
-    wchar_t text[32]; /* UTF-16 code units, NUL-terminated; 32 × 2 = 64 bytes */
+    uint16_t text[32]; /* wchar_t where it is 16-bit */
 } Label;
 ```
 
-On platforms where `wchar_t` is not 16-bit, the same layout is `uint16_t text[32];`.
+`c.WString` is a deprecated alias.
